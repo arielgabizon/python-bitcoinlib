@@ -22,6 +22,7 @@ from .serialize import *
 
 # Core definitions
 COIN = 100000000
+MIN_BLOCK_VERSION = 4
 MAX_BLOCK_SIZE = 1000000
 MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50
 
@@ -389,37 +390,49 @@ class CMutableTransaction(CTransaction):
 
 class CBlockHeader(ImmutableSerializable):
     """A block header"""
-    __slots__ = ['nVersion', 'hashPrevBlock', 'hashMerkleRoot', 'nTime', 'nBits', 'nNonce']
+    __slots__ = ['nVersion', 'hashPrevBlock', 'hashMerkleRoot', 'hashReserved', 'nTime', 'nBits', 'nNonce', 'nSolution']
 
-    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0):
+    def __init__(self, nVersion=4, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32,
+                 hashReserved=b'\x00'*32, nTime=0, nBits=0, nNonce=b'\x00'*32, nSolution=b'\x00'):
         object.__setattr__(self, 'nVersion', nVersion)
         assert len(hashPrevBlock) == 32
         object.__setattr__(self, 'hashPrevBlock', hashPrevBlock)
         assert len(hashMerkleRoot) == 32
         object.__setattr__(self, 'hashMerkleRoot', hashMerkleRoot)
+        assert len(hashReserved) == 32
+        object.__setattr__(self, 'hashReserved', hashReserved)
         object.__setattr__(self, 'nTime', nTime)
         object.__setattr__(self, 'nBits', nBits)
+        assert len(nNonce) == 32
         object.__setattr__(self, 'nNonce', nNonce)
+        object.__setattr__(self, 'nSolution', nSolution)
 
     @classmethod
     def stream_deserialize(cls, f):
         nVersion = struct.unpack(b"<i", ser_read(f,4))[0]
         hashPrevBlock = ser_read(f,32)
         hashMerkleRoot = ser_read(f,32)
+        hashReserved = ser_read(f,32)
         nTime = struct.unpack(b"<I", ser_read(f,4))[0]
         nBits = struct.unpack(b"<I", ser_read(f,4))[0]
-        nNonce = struct.unpack(b"<I", ser_read(f,4))[0]
-        return cls(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce)
+        nNonce = ser_read(f,32)
+        nSolution = BytesSerializer.stream_deserialize(f)
+        return cls(nVersion, hashPrevBlock, hashMerkleRoot, hashReserved, nTime, nBits, nNonce, nSolution)
 
     def stream_serialize(self, f):
+        assert self.nVersion >= MIN_BLOCK_VERSION
         f.write(struct.pack(b"<i", self.nVersion))
         assert len(self.hashPrevBlock) == 32
         f.write(self.hashPrevBlock)
         assert len(self.hashMerkleRoot) == 32
         f.write(self.hashMerkleRoot)
+        assert len(self.hashReserved) == 32
+        f.write(self.hashReserved)
         f.write(struct.pack(b"<I", self.nTime))
         f.write(struct.pack(b"<I", self.nBits))
-        f.write(struct.pack(b"<I", self.nNonce))
+        assert len(self.nNonce) == 32
+        f.write(self.nNonce)
+        BytesSerializer.stream_serialize(self.nSolution, f)
 
     @staticmethod
     def calc_difficulty(nBits):
@@ -436,9 +449,9 @@ class CBlockHeader(ImmutableSerializable):
     difficulty = property(lambda self: CBlockHeader.calc_difficulty(self.nBits))
 
     def __repr__(self):
-        return "%s(%i, lx(%s), lx(%s), %s, 0x%08x, 0x%08x)" % \
+        return "%s(%i, lx(%s), lx(%s), %s, 0x%08x, lx(%s))" % \
                 (self.__class__.__name__, self.nVersion, b2lx(self.hashPrevBlock), b2lx(self.hashMerkleRoot),
-                 self.nTime, self.nBits, self.nNonce)
+                 self.nTime, self.nBits, b2lx(self.nNonce))
 
 class CBlock(CBlockHeader):
     """A block including all transactions in it"""
@@ -491,9 +504,10 @@ class CBlock(CBlockHeader):
             raise ValueError('Block contains no transactions')
         return self.build_merkle_tree_from_txs(self.vtx)[-1]
 
-    def __init__(self, nVersion=2, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32, nTime=0, nBits=0, nNonce=0, vtx=()):
+    def __init__(self, nVersion=4, hashPrevBlock=b'\x00'*32, hashMerkleRoot=b'\x00'*32,
+                 hashReserved=b'\x00'*32, nTime=0, nBits=0, nNonce=b'\x00'*32, nSolution=b'\x00', vtx=()):
         """Create a new block"""
-        super(CBlock, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, nTime, nBits, nNonce)
+        super(CBlock, self).__init__(nVersion, hashPrevBlock, hashMerkleRoot, hashReserved, nTime, nBits, nNonce, nSolution)
 
         vMerkleTree = tuple(CBlock.build_merkle_tree_from_txs(vtx))
         object.__setattr__(self, 'vMerkleTree', vMerkleTree)
@@ -522,9 +536,11 @@ class CBlock(CBlockHeader):
         return CBlockHeader(nVersion=self.nVersion,
                             hashPrevBlock=self.hashPrevBlock,
                             hashMerkleRoot=self.hashMerkleRoot,
+                            hashReserved=self.hashReserved,
                             nTime=self.nTime,
                             nBits=self.nBits,
-                            nNonce=self.nNonce)
+                            nNonce=self.nNonce,
+                            nSolution=self.nSolution)
 
     def GetHash(self):
         """Return the block hash
