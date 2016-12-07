@@ -20,6 +20,9 @@ from .script import CScript
 
 from .serialize import *
 
+from .zcash import *
+from .zcash.proof import ZCProof
+
 # Core definitions
 COIN = 100000000
 MIN_BLOCK_VERSION = 4
@@ -119,6 +122,151 @@ def __make_mutable(cls):
     cls.__hash__ = Serializable.__hash__
     return cls
 
+
+class JSDescription(ImmutableSerializable):
+    """A JoinSplit within a transaction"""
+    __slots__ = [
+        'vpub_old',
+        'vpub_new',
+        'anchor',
+        'nullifiers',
+        'commitments',
+        'ephemeralKey',
+        'ciphertexts',
+        'randomSeed',
+        'macs',
+        'proof',
+    ]
+
+    def __init__(self, vpub_old=-1, vpub_new=-1, anchor=b'\x00'*32,
+                 nullifiers=(), commitments=(), ephemeralKey=b'\x00'*32,
+                 ciphertexts=(), randomSeed=b'\x00'*32, macs=(), proof=ZCProof()):
+        object.__setattr__(self, 'vpub_old', int(vpub_old))
+        object.__setattr__(self, 'vpub_new', int(vpub_new))
+        object.__setattr__(self, 'anchor', anchor)
+        object.__setattr__(self, 'nullifiers', tuple(nf for nf in nullifiers))
+        object.__setattr__(self, 'commitments', tuple(cm for cm in commitments))
+        object.__setattr__(self, 'ephemeralKey', ephemeralKey)
+        object.__setattr__(self, 'ciphertexts', tuple(ct for ct in ciphertexts))
+        object.__setattr__(self, 'randomSeed', randomSeed)
+        object.__setattr__(self, 'macs', tuple(m for m in macs))
+        object.__setattr__(self, 'proof', proof)
+
+    @classmethod
+    def stream_deserialize(cls, f):
+        vpub_old = struct.unpack(b"<q", ser_read(f,8))[0]
+        vpub_new = struct.unpack(b"<q", ser_read(f,8))[0]
+        anchor = ser_read(f,32)
+        nullifiers = [ser_read(f,32) for i in range(ZC_NUM_JS_INPUTS)]
+        commitments = [ser_read(f,32) for i in range(ZC_NUM_JS_OUTPUTS)]
+        ephemeralKey = ser_read(f,32)
+        randomSeed = ser_read(f,32)
+        macs = [ser_read(f,32) for i in range(ZC_NUM_JS_INPUTS)]
+        proof = ZCProof.stream_deserialize(f)
+        ciphertexts = [ser_read(f,ZC_NOTECIPHERTEXT_SIZE) for i in range(ZC_NUM_JS_OUTPUTS)]
+        return cls(vpub_old, vpub_new, anchor, nullifiers, commitments,
+                   ephemeralKey, ciphertexts, randomSeed, macs, proof)
+
+    def _stream_array(self, f, attr, n, l):
+        vals = self.__getattribute__(attr)
+        assert len(vals) == n
+        for i in range(n):
+            assert len(vals[i]) == l
+            f.write(vals[i])
+
+    def stream_serialize(self, f):
+        f.write(struct.pack(b"<q", self.vpub_old))
+        f.write(struct.pack(b"<q", self.vpub_new))
+        assert len(self.anchor) == 32
+        f.write(self.anchor)
+        self._stream_array(f, 'nullifiers', ZC_NUM_JS_INPUTS, 32)
+        self._stream_array(f, 'commitments', ZC_NUM_JS_OUTPUTS, 32)
+        assert len(self.ephemeralKey) == 32
+        f.write(self.ephemeralKey)
+        assert len(self.randomSeed) == 32
+        f.write(self.randomSeed)
+        self._stream_array(f, 'macs', ZC_NUM_JS_INPUTS, 32)
+        self.proof.stream_serialize(f)
+        self._stream_array(f, 'ciphertexts', ZC_NUM_JS_OUTPUTS, ZC_NOTECIPHERTEXT_SIZE)
+
+    def __repr__(self):
+        if self.vpub_old >= 0:
+            vpub_old = '%s*COIN' % str_money_value(self.vpub_old)
+        else:
+            vpub_old = '%d' % self.vpub_old
+        if self.vpub_new >= 0:
+            vpub_new = '%s*COIN' % str_money_value(self.vpub_new)
+        else:
+            vpub_new = '%d' % self.vpub_new
+        return "JSDescription(%s, %s, %r)" % (vpub_old, vpub_new, b2lx(self.anchor))
+
+    @classmethod
+    def from_jsdesc(cls, jsdesc):
+        """Create an immutable copy of an existing JSDescription
+
+        If jsdesc is already immutable (jsdesc.__class__ is JSDescription) then it will
+        be returned directly.
+        """
+        if jsdesc.__class__ is JSDescription:
+            return jsdesc
+        else:
+            return cls(
+                jsdesc.vpub_old,
+                jsdesc.vpub_new,
+                jsdesc.anchor,
+                jsdesc.nullifiers,
+                jsdesc.commitments,
+                jsdesc.ephemeralKey,
+                jsdesc.ciphertexts,
+                jsdesc.randomSeed,
+                jsdesc.macs,
+                jsdesc.proof
+            )
+
+@__make_mutable
+class MutableJSDescription(JSDescription):
+    """A mutable JSDescription"""
+    __slots__ = []
+
+    def __init__(self, vpub_old=-1, vpub_new=-1, anchor=None,
+                 nullifiers=None, commitments=None, ephemeralKey=None,
+                 ciphertexts=None, randomSeed=None, macs=None, proof=None):
+        self.vpub_old = int(vpub_old)
+        self.vpub_new = int(vpub_new)
+        self.anchor = anchor
+        if nullifiers is None:
+            nullifiers = []
+        self.nullifiers = nullifiers
+        if commitments is None:
+            commitments = []
+        self.commitments = commitments
+        self.ephemeralKey = ephemeralKey
+        if ciphertexts is None:
+            ciphertexts = []
+        self.ciphertexts = ciphertexts
+        self.randomSeed = randomSeed
+        if macs is None:
+            macs = []
+        self.macs = macs
+        if proof is None:
+            proof = ZCProof()
+        self.proof = proof
+
+    @classmethod
+    def from_jsdesc(cls, jsdesc):
+        """Create a fully mutable copy of an existing JSDescription"""
+        return cls(
+            jsdesc.vpub_old,
+            jsdesc.vpub_new,
+            jsdesc.anchor,
+            jsdesc.nullifiers,
+            jsdesc.commitments,
+            jsdesc.ephemeralKey,
+            jsdesc.ciphertexts,
+            jsdesc.randomSeed,
+            jsdesc.macs,
+            jsdesc.proof
+        )
 
 class COutPoint(ImmutableSerializable):
     """The combination of a transaction hash and an index n into its vout"""
@@ -307,9 +455,9 @@ class CMutableTxOut(CTxOut):
 
 class CTransaction(ImmutableSerializable):
     """A transaction"""
-    __slots__ = ['nVersion', 'vin', 'vout', 'nLockTime']
+    __slots__ = ['nVersion', 'vin', 'vout', 'nLockTime', 'vjoinsplit', 'joinSplitPubKey', 'joinSplitSig']
 
-    def __init__(self, vin=(), vout=(), nLockTime=0, nVersion=1):
+    def __init__(self, vin=(), vout=(), nLockTime=0, nVersion=1, vjoinsplit=(), joinSplitPubKey=b'\x00'*32, joinSplitSig=b'\x00'*64):
         """Create a new transaction
 
         vin and vout are iterables of transaction inputs and outputs
@@ -323,6 +471,9 @@ class CTransaction(ImmutableSerializable):
         object.__setattr__(self, 'nVersion', nVersion)
         object.__setattr__(self, 'vin', tuple(CTxIn.from_txin(txin) for txin in vin))
         object.__setattr__(self, 'vout', tuple(CTxOut.from_txout(txout) for txout in vout))
+        object.__setattr__(self, 'vjoinsplit', tuple(JSDescription.from_jsdesc(jsdesc) for jsdesc in vjoinsplit))
+        object.__setattr__(self, 'joinSplitPubKey', joinSplitPubKey)
+        object.__setattr__(self, 'joinSplitSig', joinSplitSig)
 
     @classmethod
     def stream_deserialize(cls, f):
@@ -330,13 +481,28 @@ class CTransaction(ImmutableSerializable):
         vin = VectorSerializer.stream_deserialize(CTxIn, f)
         vout = VectorSerializer.stream_deserialize(CTxOut, f)
         nLockTime = struct.unpack(b"<I", ser_read(f,4))[0]
-        return cls(vin, vout, nLockTime, nVersion)
+        vjoinsplit = ()
+        joinSplitPubKey = b'\x00'*32
+        joinSplitSig = b'\x00'*64
+        if nVersion >= 2:
+            vjoinsplit = VectorSerializer.stream_deserialize(JSDescription, f)
+            if vjoinsplit:
+                joinSplitPubKey = ser_read(f,32)
+                joinSplitSig = ser_read(f,64)
+        return cls(vin, vout, nLockTime, nVersion, vjoinsplit, joinSplitPubKey, joinSplitSig)
 
     def stream_serialize(self, f):
         f.write(struct.pack(b"<i", self.nVersion))
         VectorSerializer.stream_serialize(CTxIn, self.vin, f)
         VectorSerializer.stream_serialize(CTxOut, self.vout, f)
         f.write(struct.pack(b"<I", self.nLockTime))
+        if self.nVersion >= 2:
+            VectorSerializer.stream_serialize(JSDescription, self.vjoinsplit, f)
+            if self.vjoinsplit:
+                assert len(self.joinSplitPubKey) == 32
+                f.write(self.joinSplitPubKey)
+                assert len(self.joinSplitSig) == 64
+                f.write(self.joinSplitSig)
 
     def is_coinbase(self):
         return len(self.vin) == 1 and self.vin[0].prevout.is_null()
@@ -355,7 +521,7 @@ class CTransaction(ImmutableSerializable):
             return tx
 
         else:
-            return cls(tx.vin, tx.vout, tx.nLockTime, tx.nVersion)
+            return cls(tx.vin, tx.vout, tx.nLockTime, tx.nVersion, tx.vjoinsplit, tx.joinSplitPubKey, tx.joinSplitSig)
 
 
 @__make_mutable
@@ -363,7 +529,7 @@ class CMutableTransaction(CTransaction):
     """A mutable transaction"""
     __slots__ = []
 
-    def __init__(self, vin=None, vout=None, nLockTime=0, nVersion=1):
+    def __init__(self, vin=None, vout=None, nLockTime=0, nVersion=1, vjoinsplit=None, joinSplitPubKey=None, joinSplitSig=None):
         if not (0 <= nLockTime <= 0xffffffff):
             raise ValueError('CTransaction: nLockTime must be in range 0x0 to 0xffffffff; got %x' % nLockTime)
         self.nLockTime = nLockTime
@@ -377,13 +543,20 @@ class CMutableTransaction(CTransaction):
         self.vout = vout
         self.nVersion = nVersion
 
+        if vjoinsplit is None:
+            vjoinsplit = []
+        self.vjoinsplit = vjoinsplit
+        self.joinSplitPubKey = joinSplitPubKey
+        self.joinSplitSig = joinSplitSig
+
     @classmethod
     def from_tx(cls, tx):
         """Create a fully mutable copy of a pre-existing transaction"""
         vin = [CMutableTxIn.from_txin(txin) for txin in tx.vin]
         vout = [CMutableTxOut.from_txout(txout) for txout in tx.vout]
+        vjoinsplit = [MutableJSDescription.from_jsdesc(jsdesc) for jsdesc in tx.vjoinsplit]
 
-        return cls(vin, vout, tx.nLockTime, tx.nVersion)
+        return cls(vin, vout, tx.nLockTime, tx.nVersion, vjoinsplit, tx.joinSplitPubKey, tx.joinSplitSig)
 
 
 
