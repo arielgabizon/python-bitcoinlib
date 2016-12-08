@@ -26,7 +26,8 @@ from .zcash.proof import ZCProof
 # Core definitions
 COIN = 100000000
 MIN_BLOCK_VERSION = 4
-MAX_BLOCK_SIZE = 1000000
+MIN_TX_VERSION = 1
+MAX_BLOCK_SIZE = 2000000
 MAX_BLOCK_SIGOPS = MAX_BLOCK_SIZE/50
 
 def MoneyRange(nValue, params=None):
@@ -783,9 +784,12 @@ def CheckTransaction(tx):
     """
     global coreparams
 
-    if not tx.vin:
+    if tx.nVersion < MIN_TX_VERSION:
+        raise CheckTransactionError("CheckTransaction() : version too low")
+
+    if not tx.vin and not tx.vjoinsplit:
         raise CheckTransactionError("CheckTransaction() : vin empty")
-    if not tx.vout:
+    if not tx.vout and not tx.vjoinsplit:
         raise CheckTransactionError("CheckTransaction() : vout empty")
 
     # Size limits
@@ -803,6 +807,36 @@ def CheckTransaction(tx):
         if not MoneyRange(nValueOut):
             raise CheckTransactionError("CheckTransaction() : txout total out of range")
 
+    # Ensure that joinsplit values are well-formed
+    nValueIn = 0;
+    for joinsplit in tx.vjoinsplit:
+        if joinsplit.vpub_old < 0:
+            raise CheckTransactionError("CheckTransaction() : joinsplit.vpub_old negative")
+
+        if joinsplit.vpub_new < 0:
+            raise CheckTransactionError("CheckTransaction() : joinsplit.vpub_new negative")
+
+        if joinsplit.vpub_old > coreparams.MAX_MONEY:
+            raise CheckTransactionError("CheckTransaction() : joinsplit.vpub_old too high")
+
+        if joinsplit.vpub_new > coreparams.MAX_MONEY:
+            raise CheckTransactionError("CheckTransaction() : joinsplit.vpub_new too high")
+
+        if joinsplit.vpub_new != 0 and joinsplit.vpub_old != 0:
+            raise CheckTransactionError("CheckTransaction() : joinsplit.vpub_new and joinsplit.vpub_old both nonzero")
+
+        nValueOut += joinsplit.vpub_old
+        if not MoneyRange(nValueOut):
+            raise CheckTransactionError("CheckTransaction() : txout total out of range")
+
+        # Ensure input values do not exceed MAX_MONEY
+        # We have not resolved the txin values at this stage,
+        # but we do know what the joinsplits claim to add
+        # to the value pool.
+        nValueIn += joinsplit.vpub_new
+        if not MoneyRange(joinsplit.vpub_new) or not MoneyRange(nValueIn):
+            raise CheckTransactionError("CheckTransaction() : txin total out of range")
+
     # Check for duplicate inputs
     vin_outpoints = set()
     for txin in tx.vin:
@@ -810,7 +844,19 @@ def CheckTransaction(tx):
             raise CheckTransactionError("CheckTransaction() : duplicate inputs")
         vin_outpoints.add(txin.prevout)
 
+    # Check for duplicate joinsplit nullifiers in this transaction
+    vjoinsplit_nullifiers = set()
+    for joinsplit in tx.vjoinsplit:
+        for nf in joinsplit.nullifiers:
+            if nf in vjoinsplit_nullifiers:
+                raise CheckTransactionError("CheckTransaction() : duplicate nullifiers")
+            vjoinsplit_nullifiers.add(nf)
+
     if tx.is_coinbase():
+        # There should be no joinsplits in a coinbase transaction
+        if tx.vjoinsplit:
+            raise CheckTransactionError("CheckTransaction() : coinbase has joinsplits")
+
         if not (2 <= len(tx.vin[0].scriptSig) <= 100):
             raise CheckTransactionError("CheckTransaction() : coinbase script size")
 
@@ -818,6 +864,10 @@ def CheckTransaction(tx):
         for txin in tx.vin:
             if txin.prevout.is_null():
                 raise CheckTransactionError("CheckTransaction() : prevout is null")
+
+        if tx.vjoinsplit:
+            # TODO: Check JoinSplit signature
+            pass
 
 
 
