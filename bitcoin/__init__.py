@@ -19,38 +19,32 @@ import bitcoin.core
 __version__ = '0.7.1-SNAPSHOT'
 
 class MainParams(bitcoin.core.CoreMainParams):
-    MESSAGE_START = b'\xf9\xbe\xb4\xd9'
-    DEFAULT_PORT = 8333
-    RPC_PORT = 8332
-    DNS_SEEDS = (('bitcoin.sipa.be', 'seed.bitcoin.sipa.be'),
-                 ('bluematt.me', 'dnsseed.bluematt.me'),
-                 ('dashjr.org', 'dnsseed.bitcoin.dashjr.org'),
-                 ('bitcoinstats.com', 'seed.bitcoinstats.com'),
-                 ('xf2.org', 'bitseed.xf2.org'),
-                 ('bitcoin.jonasschnelli.ch', 'seed.bitcoin.jonasschnelli.ch'))
-    BASE58_PREFIXES = {'PUBKEY_ADDR':0,
-                       'SCRIPT_ADDR':5,
+    MESSAGE_START = b'\x24\xe9\x27\x64'
+    DEFAULT_PORT = 8233
+    RPC_PORT = 8232
+    DNS_SEEDS = (('z.cash', 'dnsseed.z.cash'),
+                 ('str4d.xyz', 'dnsseed.str4d.xyz'),
+                 ('znodes.org', 'dnsseed.znodes.org'))
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1c\xb8',
+                       'SCRIPT_ADDR':b'\x1c\xbd',
                        'SECRET_KEY' :128}
 
 class TestNetParams(bitcoin.core.CoreTestNetParams):
-    MESSAGE_START = b'\x0b\x11\x09\x07'
-    DEFAULT_PORT = 18333
-    RPC_PORT = 18332
-    DNS_SEEDS = (('testnetbitcoin.jonasschnelli.ch', 'testnet-seed.bitcoin.jonasschnelli.ch'),
-                 ('petertodd.org', 'seed.tbtc.petertodd.org'),
-                 ('bluematt.me', 'testnet-seed.bluematt.me'),
-                 ('bitcoin.schildbach.de', 'testnet-seed.bitcoin.schildbach.de'))
-    BASE58_PREFIXES = {'PUBKEY_ADDR':111,
-                       'SCRIPT_ADDR':196,
+    MESSAGE_START = b'\xfa\x1a\xf9\xbf'
+    DEFAULT_PORT = 18233
+    RPC_PORT = 18232
+    DNS_SEEDS = (('z.cash', 'dnsseed.testnet.z.cash'))
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
+                       'SCRIPT_ADDR':b'\x1c\xba',
                        'SECRET_KEY' :239}
 
 class RegTestParams(bitcoin.core.CoreRegTestParams):
-    MESSAGE_START = b'\xfa\xbf\xb5\xda'
+    MESSAGE_START = b'\xaa\xea\x3f\x5f'
     DEFAULT_PORT = 18444
-    RPC_PORT = 18332
+    RPC_PORT = 18232
     DNS_SEEDS = ()
-    BASE58_PREFIXES = {'PUBKEY_ADDR':111,
-                       'SCRIPT_ADDR':196,
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
+                       'SCRIPT_ADDR':b'\x1c\xba',
                        'SECRET_KEY' :239}
 
 """Master global setting for what chain params we're using.
