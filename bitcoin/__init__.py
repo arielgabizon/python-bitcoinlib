@@ -25,17 +25,24 @@ class MainParams(bitcoin.core.CoreMainParams):
     DNS_SEEDS = (('z.cash', 'dnsseed.z.cash'),
                  ('str4d.xyz', 'dnsseed.str4d.xyz'),
                  ('znodes.org', 'dnsseed.znodes.org'))
-    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1c\xb8',
-                       'SCRIPT_ADDR':b'\x1c\xbd',
+    # BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1c\xb8',
+    #                    'SCRIPT_ADDR':b'\x1c\xbd',
+    #                    'SECRET_KEY' :128}
+    BASE58_PREFIXES = {'PUBKEY_ADDR':7352,
+                       'SCRIPT_ADDR':7357,
                        'SECRET_KEY' :128}
+
 
 class TestNetParams(bitcoin.core.CoreTestNetParams):
     MESSAGE_START = b'\xfa\x1a\xf9\xbf'
     DEFAULT_PORT = 18233
     RPC_PORT = 18232
     DNS_SEEDS = (('z.cash', 'dnsseed.testnet.z.cash'))
-    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
-                       'SCRIPT_ADDR':b'\x1c\xba',
+    # BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
+    #                    'SCRIPT_ADDR':b'\x1c\xba',
+    #                    'SECRET_KEY' :239}
+    BASE58_PREFIXES = {'PUBKEY_ADDR':7461,
+                       'SCRIPT_ADDR':7354,
                        'SECRET_KEY' :239}
 
 class RegTestParams(bitcoin.core.CoreRegTestParams):
@@ -43,8 +50,8 @@ class RegTestParams(bitcoin.core.CoreRegTestParams):
     DEFAULT_PORT = 18444
     RPC_PORT = 18232
     DNS_SEEDS = ()
-    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
-                       'SCRIPT_ADDR':b'\x1c\xba',
+    BASE58_PREFIXES = {'PUBKEY_ADDR':7461,
+                       'SCRIPT_ADDR':7354,
                        'SECRET_KEY' :239}
 
 """Master global setting for what chain params we're using.

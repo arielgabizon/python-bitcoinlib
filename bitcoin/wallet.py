@@ -34,11 +34,9 @@ class CBitcoinAddressError(bitcoin.base58.Base58Error):
 
 class CBitcoinAddress(bitcoin.base58.CBase58Data):
     """A Bitcoin address"""
-
     @classmethod
     def from_bytes(cls, data, nVersion):
         self = super(CBitcoinAddress, cls).from_bytes(data, nVersion)
-
         if nVersion == bitcoin.params.BASE58_PREFIXES['SCRIPT_ADDR']:
             self.__class__ = P2SHBitcoinAddress
 
@@ -102,6 +100,7 @@ class P2SHBitcoinAddress(CBitcoinAddress):
         form.
         """
         if scriptPubKey.is_p2sh():
+            # are there 23 bytes here for zcash?
             return cls.from_bytes(scriptPubKey[2:22], bitcoin.params.BASE58_PREFIXES['SCRIPT_ADDR'])
 
         else:
