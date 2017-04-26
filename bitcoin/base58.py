@@ -14,6 +14,7 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+
 import sys
 _bchr = chr
 _bord = ord
@@ -103,8 +104,6 @@ class CBase58Data(bytes):
     """
     def __new__(cls, s):
         k = decode(s)
-        # raise ValueError(ord(k[1:2]))
-        # [0:1] or [0:2] for zcash?
         verbyte, data, check0 = k[0:2], k[2:-4], k[-4:]
         check1 = bitcoin.core.Hash(verbyte + data)[:4]
         if check0 != check1:

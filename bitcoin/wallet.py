@@ -44,7 +44,7 @@ class CBitcoinAddress(bitcoin.base58.CBase58Data):
             self.__class__ = P2PKHBitcoinAddress
 
         else:
-           raise CBitcoinAddressError('Version %d not a recognized Bitcoin Address' % nVersion)
+           raise CBitcoinAddressError('Version {0} not a recognized Bitcoin Address'.format(nVersion))
 
         return self
 
