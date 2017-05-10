@@ -11,14 +11,14 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import bitcoin.core
+import zcash.core
 
 # Note that setup.py can break if __init__.py imports any external
 # dependencies, as these might not be installed when setup.py runs. In this
 # case __version__ could be moved to a separate version.py and imported here.
 __version__ = '0.7.1-SNAPSHOT'
 
-class MainParams(bitcoin.core.CoreMainParams):
+class MainParams(zcash.core.CoreMainParams):
     MESSAGE_START = b'\x24\xe9\x27\x64'
     DEFAULT_PORT = 8233
     RPC_PORT = 8232
@@ -33,7 +33,7 @@ class MainParams(bitcoin.core.CoreMainParams):
     #                    'SECRET_KEY' :128}
 
 
-class TestNetParams(bitcoin.core.CoreTestNetParams):
+class TestNetParams(zcash.core.CoreTestNetParams):
     MESSAGE_START = b'\xfa\x1a\xf9\xbf'
     DEFAULT_PORT = 18233
     RPC_PORT = 18232
@@ -45,7 +45,7 @@ class TestNetParams(bitcoin.core.CoreTestNetParams):
     #                    'SCRIPT_ADDR':7354,
     #                    'SECRET_KEY' :239}
 
-class RegTestParams(bitcoin.core.CoreRegTestParams):
+class RegTestParams(zcash.core.CoreRegTestParams):
     MESSAGE_START = b'\xaa\xea\x3f\x5f'
     DEFAULT_PORT = 18444
     RPC_PORT = 18232
@@ -57,9 +57,9 @@ class RegTestParams(bitcoin.core.CoreRegTestParams):
 """Master global setting for what chain params we're using.
 
 However, don't set this directly, use SelectParams() instead so as to set the
-bitcoin.core.params correctly too.
+zcash.core.params correctly too.
 """
-#params = bitcoin.core.coreparams = MainParams()
+#params = zcash.core.coreparams = MainParams()
 params = MainParams()
 
 def SelectParams(name):
@@ -70,12 +70,12 @@ def SelectParams(name):
     Default chain is 'mainnet'
     """
     global params
-    bitcoin.core._SelectCoreParams(name)
+    zcash.core._SelectCoreParams(name)
     if name == 'mainnet':
-        params = bitcoin.core.coreparams = MainParams()
+        params = zcash.core.coreparams = MainParams()
     elif name == 'testnet':
-        params = bitcoin.core.coreparams = TestNetParams()
+        params = zcash.core.coreparams = TestNetParams()
     elif name == 'regtest':
-        params = bitcoin.core.coreparams = RegTestParams()
+        params = zcash.core.coreparams = RegTestParams()
     else:
         raise ValueError('Unknown chain %r' % name)

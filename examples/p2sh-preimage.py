@@ -1,40 +1,38 @@
 #!/usr/bin/env python3
 
-# Copyright (C) 2014 The python-bitcoinlib developers
-#
-# This file is part of python-bitcoinlib.
-#
-# It is subject to the license terms in the LICENSE file found in the top-level
-# directory of this distribution.
-#
-# No part of python-bitcoinlib, including this file, may be copied, modified,
-# propagated, or distributed except according to the terms contained in the
-# LICENSE file.
-
-"""Low-level example of how to spend a P2SH/BIP16 txout"""
+# Copyright (C) 2017 the python-zcashlib developers
 
 import sys
 if sys.version_info.major < 3:
     sys.stderr.write('Sorry, Python 3.x required by this example.\n')
     sys.exit(1)
 
-import hashlib
-
+import zcash
+import zcash.rpc
 from zcash import SelectParams
 from zcash.core import b2x, lx, COIN, COutPoint, CMutableTxOut, CMutableTxIn, CMutableTransaction, Hash160
-from zcash.core.script import CScript, OP_DUP, OP_HASH160, OP_EQUALVERIFY, OP_CHECKSIG, SignatureHash, SIGHASH_ALL
+from zcash.core.script import CScript, OP_DUP, OP_HASH160, OP_SHA256, OP_EQUAL, OP_EQUALVERIFY, OP_CHECKSIG, SignatureHash, SIGHASH_ALL, SIGHASH_ANYONECANPAY
 from zcash.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from zcash.wallet import CBitcoinAddress, CBitcoinSecret
 
 SelectParams('testnet')
 
+import hashlib
+
+proxy = zcash.rpc.Proxy()
+info = proxy.getinfo()
+print("INFO FROM PROXY: ", info)
+
+
 # Create the (in)famous correct brainwallet secret key.
-h = hashlib.sha256(b'correct horse battery staple').digest()
-seckey = CBitcoinSecret.from_secret_bytes(h)
+preimage = b'helloworld'
+print('preimage to hex', b2x(preimage))
+hashstring = hashlib.sha256(preimage).digest()
+print('hashstring: ', b2x(hashstring))
 
 # Create a redeemScript. Similar to a scriptPubKey the redeemScript must be
 # satisfied for the funds to be spent.
-txin_redeemScript = CScript([seckey.pub, OP_CHECKSIG])
+txin_redeemScript = CScript([OP_SHA256, hashstring, OP_EQUAL])
 print(b2x(txin_redeemScript))
 
 # Create the magic P2SH scriptPubKey format from that redeemScript. You should
@@ -42,7 +40,6 @@ print(b2x(txin_redeemScript))
 # understand what's happening, as well as read BIP16:
 # https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki
 txin_scriptPubKey = txin_redeemScript.to_p2sh_scriptPubKey()
-print('scriptPubKey:', str(txin_scriptPubKey))
 
 # Convert the P2SH scriptPubKey to a base58 zcash address and print it.
 # You'll need to send some funds to it to create a txout to spend.
@@ -55,8 +52,8 @@ print('Pay to:',str(txin_p2sh_address))
 # transaction hashes are shown little-endian rather than the usual big-endian.
 # There's also a corresponding x() convenience function that takes big-endian
 # hex and converts it to bytes.
-txid = lx('bff785da9f8169f49be92fa95e31f0890c385bfb1bd24d6b94d7900057c617ae')
-vout = 0
+txid = lx('7064c9c78c4839c456ae13be70a184c0f773ec57c083a17ed18846be9072a61a')
+vout = 1
 
 # Create the txin structure, which includes the outpoint. The scriptSig
 # defaults to being empty.
@@ -64,7 +61,7 @@ txin = CMutableTxIn(COutPoint(txid, vout))
 
 # Create the txout. This time we create the scriptPubKey from a Bitcoin
 # address.
-txout = CMutableTxOut(0.0005*COIN, CBitcoinAddress('tmKBPqa8qqKA7vrGq1AaXHSAr9vqa3GczzK').to_scriptPubKey())
+txout = CMutableTxOut(1.10*COIN, CBitcoinAddress('tmQaM6Ry86vdrokJG8YbNqbouCQ6Kd71agZ').to_scriptPubKey())
 
 # Create the unsigned transaction.
 tx = CMutableTransaction([txin], [txout])
@@ -75,16 +72,18 @@ tx = CMutableTransaction([txin], [txout])
 # corresponding SignatureHash() function will use that same script when it
 # replaces the scriptSig in the transaction being hashed with the script being
 # executed.
-sighash = SignatureHash(txin_redeemScript, tx, 0, SIGHASH_ALL)
+sighash = SignatureHash(txin_redeemScript, tx, 0, SIGHASH_ANYONECANPAY)
+print('sighash', b2x(sighash))
 
+# privkey = CBitcoinSecret('cNUMK7zPWDq8YLFoARbLiFSgJnZ4jDuJzXxdSebNupzHB8ZSbQ4n')
 # Now sign it. We have to append the type of signature we want to the end, in
 # this case the usual SIGHASH_ALL.
-sig = seckey.sign(sighash) + bytes([SIGHASH_ALL])
+# sig = privkey.sign(sighash) + bytes([SIGHASH_ANYONECANPAY])
 
 # Set the scriptSig of our transaction input appropriately.
-txin.scriptSig = CScript([sig, txin_redeemScript])
-print(b2x(tx.serialize()))
+txin.scriptSig = CScript([preimage, txin_redeemScript])
 
+print('tx', tx)
 # Verify the signature worked. This calls EvalScript() and actually executes
 # the opcodes in the scripts to see if everything worked out. If it doesn't an
 # exception will be raised.
@@ -92,4 +91,4 @@ VerifyScript(txin.scriptSig, txin_scriptPubKey, tx, 0, (SCRIPT_VERIFY_P2SH,))
 
 # Done! Print the transaction to standard output with the bytes-to-hex
 # function.
-print(b2x(tx.serialize()))
+print('Serialized txn', b2x(tx.serialize()))

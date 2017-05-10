@@ -8,3 +8,4 @@ local*.cfg
 build/
 htmlcov/
 python_bitcoinlib.egg-info/
+python_zcashlib.egg-info/

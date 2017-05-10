@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function
 
 import struct
 
-from bitcoin.core.serialize import *
+from zcash.core.serialize import *
 
 G1_PREFIX_MASK = 0x02
 G2_PREFIX_MASK = 0x0a

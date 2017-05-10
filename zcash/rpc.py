@@ -1,23 +1,24 @@
 # Copyright (C) 2007 Jan-Klaas Kollhof
 # Copyright (C) 2011-2015 The python-bitcoinlib developers
+# Copyright (C) 2017 The python-zcashlib developers
 #
-# This file is part of python-bitcoinlib.
+# This file is part of python-zcashlib.
 #
 # It is subject to the license terms in the LICENSE file found in the top-level
 # directory of this distribution.
 #
-# No part of python-bitcoinlib, including this file, may be copied, modified,
+# No part of python-zcashlib, including this file, may be copied, modified,
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
-"""Bitcoin Core RPC support
+"""Zcash RPC support
 
 By default this uses the standard library ``json`` module. By monkey patching,
 a different implementation can be used instead, at your own risk:
 
 >>> import simplejson
->>> import bitcoin.rpc
->>> bitcoin.rpc.json = simplejson
+>>> import zcash.rpc
+>>> zcash.rpc.json = simplejson
 
 (``simplejson`` is the externally maintained version of the same module and
 thus better optimized but perhaps less stable.)
@@ -42,10 +43,10 @@ try:
 except ImportError:
     import urlparse
 
-import bitcoin
-from bitcoin.core import COIN, x, lx, b2lx, CBlock, CBlockHeader, CTransaction, COutPoint, CTxOut
-from bitcoin.core.script import CScript
-from bitcoin.wallet import CBitcoinAddress, CBitcoinSecret
+import zcash
+from zcash.core import COIN, x, lx, b2lx, CBlock, CBlockHeader, CTransaction, COutPoint, CTxOut
+from zcash.core.script import CScript
+from zcash.wallet import CBitcoinAddress, CBitcoinSecret
 
 DEFAULT_USER_AGENT = "AuthServiceProxy/0.1"
 
@@ -122,7 +123,7 @@ class BaseProxy(object):
     def __init__(self,
                  service_url=None,
                  service_port=None,
-                 btc_conf_file=None,
+                 zcash_conf_file=None,
                  timeout=DEFAULT_HTTP_TIMEOUT):
 
         # Create a dummy connection early on so if __init__() fails prior to
@@ -131,19 +132,17 @@ class BaseProxy(object):
         self.__conn = None
 
         if service_url is None:
-            # Figure out the path to the bitcoin.conf file
-            if btc_conf_file is None:
-                if platform.system() == 'Darwin':
-                    btc_conf_file = os.path.expanduser('~/Library/Application Support/Bitcoin/')
-                elif platform.system() == 'Windows':
-                    btc_conf_file = os.path.join(os.environ['APPDATA'], 'Bitcoin')
+            # Figure out the path to the zcash.conf file
+            if zcash_conf_file is None:
+                if platform.system() == 'Windows':
+                    zcash_conf_file = os.path.join(os.environ['APPDATA'], 'Zcash')
                 else:
-                    btc_conf_file = os.path.expanduser('~/.bitcoin')
-                btc_conf_file = os.path.join(btc_conf_file, 'bitcoin.conf')
+                    zcash_conf_file = os.path.expanduser('~/.zcash')
+                zcash_conf_file = os.path.join(zcash_conf_file, 'zcash.conf')
 
-            # Extract contents of bitcoin.conf to build service_url
-            with open(btc_conf_file, 'r') as fd:
-                # Bitcoin Core accepts empty rpcuser, not specified in btc_conf_file
+            # Extract contents of zcash.conf to build service_url
+            with open(zcash_conf_file, 'r') as fd:
+                # zcash accepts empty rpcuser, not specified in zcash_conf_file
                 conf = {'rpcuser': ""}
                 for line in fd.readlines():
                     if '#' in line:
@@ -154,12 +153,12 @@ class BaseProxy(object):
                     conf[k.strip()] = v.strip()
 
                 if service_port is None:
-                    service_port = bitcoin.params.RPC_PORT
+                    service_port = zcash.params.RPC_PORT
                 conf['rpcport'] = int(conf.get('rpcport', service_port))
                 conf['rpchost'] = conf.get('rpcconnect', 'localhost')
 
                 if 'rpcpassword' not in conf:
-                    raise ValueError('The value of rpcpassword not specified in the configuration file: %s' % btc_conf_file)
+                    raise ValueError('The value of rpcpassword not specified in the configuration file: %s' % zcash_conf_file)
 
                 service_url = ('%s://%s:%s@%s:%d' %
                     ('http',
@@ -233,7 +232,7 @@ class BaseProxy(object):
 
 
 class RawProxy(BaseProxy):
-    """Low-level proxy to a bitcoin JSON-RPC service
+    """Low-level proxy to a zcash JSON-RPC service
 
     Unlike ``Proxy``, no conversion is done besides parsing JSON. As far as
     Python is concerned, you can call any method; ``JSONRPCError`` will be
@@ -242,12 +241,12 @@ class RawProxy(BaseProxy):
     def __init__(self,
                  service_url=None,
                  service_port=None,
-                 btc_conf_file=None,
+                 zcash_conf_file=None,
                  timeout=DEFAULT_HTTP_TIMEOUT,
                  **kwargs):
         super(RawProxy, self).__init__(service_url=service_url,
                                        service_port=service_port,
-                                       btc_conf_file=btc_conf_file,
+                                       zcash_conf_file=zcash_conf_file,
                                        timeout=timeout,
                                        **kwargs)
 
@@ -259,37 +258,36 @@ class RawProxy(BaseProxy):
         # Create a callable to do the actual call
         f = lambda *args: self._call(name, *args)
 
-        # Make debuggers show <function bitcoin.rpc.name> rather than <function
-        # bitcoin.rpc.<lambda>>
+        # Make debuggers show <function zcash.rpc.name> rather than <function
+        # zcash.rpc.<lambda>>
         f.__name__ = name
         return f
 
 
 class Proxy(BaseProxy):
-    """Proxy to a bitcoin RPC service
+    """Proxy to a zcash RPC service
 
-    Unlike ``RawProxy``, data is passed as ``bitcoin.core`` objects or packed
+    Unlike ``RawProxy``, data is passed as ``zcash.core`` objects or packed
     bytes, rather than JSON or hex strings. Not all methods are implemented
     yet; you can use ``call`` to access missing ones in a forward-compatible
-    way. Assumes Bitcoin Core version >= v0.13.0; older versions mostly work,
-    but there are a few incompatibilities.
+    way. Assumes Zcash version >= v1.0.0
     """
 
     def __init__(self,
                  service_url=None,
                  service_port=None,
-                 btc_conf_file=None,
+                 zcash_conf_file=None,
                  timeout=DEFAULT_HTTP_TIMEOUT,
                  **kwargs):
         """Create a proxy object
 
         If ``service_url`` is not specified, the username and password are read
-        out of the file ``btc_conf_file``. If ``btc_conf_file`` is not
-        specified, ``~/.bitcoin/bitcoin.conf`` or equivalent is used by
+        out of the file ``zcash_conf_file``. If ``zcash_conf_file`` is not
+        specified, ``~/.zcash/zcash.conf`` or equivalent is used by
         default.  The default port is set according to the chain parameters in
         use: mainnet, testnet, or regtest.
 
-        Usually no arguments to ``Proxy()`` are needed; the local bitcoind will
+        Usually no arguments to ``Proxy()`` are needed; the local zcashd will
         be used.
 
         ``timeout`` - timeout in seconds before the HTTP interface times out
@@ -297,7 +295,7 @@ class Proxy(BaseProxy):
 
         super(Proxy, self).__init__(service_url=service_url,
                                     service_port=service_port,
-                                    btc_conf_file=btc_conf_file,
+                                    zcash_conf_file=zcash_conf_file,
                                     timeout=timeout,
                                     **kwargs)
 
@@ -345,7 +343,7 @@ class Proxy(BaseProxy):
         return (lx(blk_hash) for blk_hash in r)
 
     def getaccountaddress(self, account=None):
-        """Return the current Bitcoin address for receiving payments to this
+        """Return the current zcash address for receiving payments to this
         account."""
         r = self._call('getaccountaddress', account)
         return CBitcoinAddress(r)
@@ -445,7 +443,7 @@ class Proxy(BaseProxy):
         return self._call('getmininginfo')
 
     def getnewaddress(self, account=None):
-        """Return a new Bitcoin address for receiving payments.
+        """Return a new zcash address for receiving payments.
 
         If account is not None, it is added to the address book so payments
         received with the address will be credited to account.
@@ -459,7 +457,7 @@ class Proxy(BaseProxy):
         return CBitcoinAddress(r)
 
     def getrawchangeaddress(self):
-        """Returns a new Bitcoin address, for receiving change.
+        """Returns a new zcash address, for receiving change.
 
         This is for use with raw transactions, NOT normal use.
         """
@@ -640,7 +638,7 @@ class Proxy(BaseProxy):
         """Submit a new block to the network.
 
         params is optional and is currently ignored by bitcoind. See
-        https://en.bitcoin.it/wiki/BIP_0022 for full specification.
+        https://en.zcash.it/wiki/BIP_0022 for full specification.
         """
         hexblock = hexlify(block.serialize())
         if params is not None:

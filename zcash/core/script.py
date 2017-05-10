@@ -12,7 +12,7 @@
 """Scripts
 
 Functionality to build scripts, as well as SignatureHash(). Script evaluation
-is in bitcoin.core.scripteval
+is in zcash.core.scripteval
 """
 
 from __future__ import absolute_import, division, print_function
@@ -27,8 +27,8 @@ if sys.version > '3':
 
 import struct
 
-import bitcoin.core
-import bitcoin.core._bignum
+import zcash.core
+import zcash.core._bignum
 
 MAX_SCRIPT_SIZE = 10000
 MAX_SCRIPT_ELEMENT_SIZE = 520
@@ -523,7 +523,7 @@ class CScript(bytes):
             elif other == -1:
                 other = bytes(_bchr(OP_1NEGATE))
             else:
-                other = CScriptOp.encode_op_pushdata(bitcoin.core._bignum.bn2vch(other))
+                other = CScriptOp.encode_op_pushdata(zcash.core._bignum.bn2vch(other))
         elif isinstance(other, (bytes, bytearray)):
             other = CScriptOp.encode_op_pushdata(other)
         return other
@@ -638,7 +638,7 @@ class CScript(bytes):
         # need to change
         def _repr(o):
             if isinstance(o, bytes):
-                return "x('%s')" % bitcoin.core.b2x(o)
+                return "x('%s')" % zcash.core.b2x(o)
             else:
                 return repr(o)
 
@@ -678,7 +678,7 @@ class CScript(bytes):
         Note that this test is consensus-critical.
 
         Scripts that contain invalid pushdata ops return False, matching the
-        behavior in Bitcoin Core.
+        behavior in zcash Core.
         """
         try:
             for (op, op_data, idx) in self.raw_iter():
@@ -751,7 +751,7 @@ class CScript(bytes):
         """
         if checksize and len(self) > MAX_SCRIPT_ELEMENT_SIZE:
             raise ValueError("redeemScript exceeds max allowed size; P2SH output would be unspendable")
-        return CScript([OP_HASH160, bitcoin.core.Hash160(self), OP_EQUAL])
+        return CScript([OP_HASH160, zcash.core.Hash160(self), OP_EQUAL])
 
     def GetSigOpCount(self, fAccurate):
         """Get the SigOp count.
@@ -839,7 +839,7 @@ def SignatureHash(script, txTo, inIdx, hashtype):
     """
     if inIdx >= len(txTo.vin):
         raise ValueError("inIdx %d out of range (%d)" % (inIdx, len(txTo.vin)))
-    txtmp = bitcoin.core.CMutableTransaction.from_tx(txTo)
+    txtmp = zcash.core.CMutableTransaction.from_tx(txTo)
 
     for i in range(len(txtmp.vin)):
         if i != inIdx:
@@ -860,7 +860,7 @@ def SignatureHash(script, txTo, inIdx, hashtype):
         tmp = txtmp.vout[outIdx]
         txtmp.vout = []
         for i in range(outIdx):
-            txtmp.vout.append(bitcoin.core.CTxOut())
+            txtmp.vout.append(zcash.core.CTxOut())
         txtmp.vout.append(tmp)
 
         for i in range(len(txtmp.vin)):
@@ -878,7 +878,7 @@ def SignatureHash(script, txTo, inIdx, hashtype):
     s = txtmp.serialize()
     s += struct.pack(b"<I", hashtype)
 
-    hash = bitcoin.core.Hash(s)
+    hash = zcash.core.Hash(s)
 
     return hash
 

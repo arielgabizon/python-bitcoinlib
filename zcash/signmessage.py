@@ -11,9 +11,9 @@
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from bitcoin.core.key import CPubKey
-from bitcoin.core.serialize import ImmutableSerializable
-from bitcoin.wallet import P2PKHBitcoinAddress
+from zcash.core.key import CPubKey
+from zcash.core.serialize import ImmutableSerializable
+from zcash.wallet import P2PKHBitcoinAddress
 import bitcoin
 import base64
 import sys
@@ -54,13 +54,13 @@ class BitcoinMessage(ImmutableSerializable):
 
     @classmethod
     def stream_deserialize(cls, f):
-        magic = bitcoin.core.serialize.BytesSerializer.stream_deserialize(f)
-        message = bitcoin.core.serialize.BytesSerializer.stream_deserialize(f)
+        magic = zcash.core.serialize.BytesSerializer.stream_deserialize(f)
+        message = zcash.core.serialize.BytesSerializer.stream_deserialize(f)
         return cls(message, magic)
 
     def stream_serialize(self, f):
-        bitcoin.core.serialize.BytesSerializer.stream_serialize(self.magic, f)
-        bitcoin.core.serialize.BytesSerializer.stream_serialize(self.message, f)
+        zcash.core.serialize.BytesSerializer.stream_serialize(self.magic, f)
+        zcash.core.serialize.BytesSerializer.stream_serialize(self.message, f)
 
     def __str__(self):
         return self.message.decode('ascii')

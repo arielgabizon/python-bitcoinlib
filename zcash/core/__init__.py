@@ -20,8 +20,8 @@ from .script import CScript
 
 from .serialize import *
 
-from .zcash import *
-from .zcash.proof import ZCProof
+from .zkproofs import *
+from .zkproofs.proof import ZCProof
 
 # Core definitions
 COIN = 100000000
@@ -730,7 +730,7 @@ class CBlock(CBlockHeader):
             return _cached_GetHash
 
 class CoreChainParams(object):
-    """Define consensus-critical parameters of a given instance of the Bitcoin system"""
+    """Define consensus-critical parameters of a given instance of the zcash system"""
     MAX_MONEY = None
     GENESIS_BLOCK = None
     PROOF_OF_WORK_LIMIT = None
@@ -761,7 +761,7 @@ coreparams = CoreMainParams()
 def _SelectCoreParams(name):
     """Select the core chain parameters to use
 
-    Don't use this directly, use bitcoin.SelectParams() instead so both
+    Don't use this directly, use zcash.SelectParams() instead so both
     consensus-critical and general parameters are set properly.
     """
     global coreparams

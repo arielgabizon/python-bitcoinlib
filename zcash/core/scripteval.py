@@ -12,7 +12,7 @@
 """Script evaluation
 
 Be warned that there are highly likely to be consensus bugs in this code; it is
-unlikely to match Satoshi Bitcoin exactly. Think carefully before using this
+unlikely to match Satoshi zcash exactly. Think carefully before using this
 module.
 """
 
@@ -26,14 +26,14 @@ if sys.version > '3':
 
 import hashlib
 
-import bitcoin.core
-import bitcoin.core._bignum
-import bitcoin.core.key
-import bitcoin.core.serialize
+import zcash.core
+import zcash.core._bignum
+import zcash.core.key
+import zcash.core.serialize
 
 # Importing everything for simplicity; note that we use __all__ at the end so
 # we're not exporting the whole contents of the script module.
-from bitcoin.core.script import *
+from zcash.core.script import *
 
 MAX_NUM_SIZE = 4
 MAX_STACK_ITEMS = 1000
@@ -62,7 +62,7 @@ SCRIPT_VERIFY_FLAGS_BY_NAME = {
     'CHECKLOCKTIMEVERIFY': SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY,
 }
 
-class EvalScriptError(bitcoin.core.ValidationError):
+class EvalScriptError(zcash.core.ValidationError):
     """Base class for exceptions raised when a script fails during EvalScript()
 
     The execution state just prior the opcode raising the is saved. (if
@@ -114,7 +114,7 @@ class VerifyOpFailedError(EvalScriptError):
                                                   **kwargs)
 
 def _CastToBigNum(s, err_raiser):
-    v = bitcoin.core._bignum.vch2bn(s)
+    v = zcash.core._bignum.vch2bn(s)
     if len(s) > MAX_NUM_SIZE:
         raise err_raiser(EvalScriptError, 'CastToBigNum() : overflow')
     return v
@@ -131,7 +131,7 @@ def _CastToBool(s):
 
 
 def _CheckSig(sig, pubkey, script, txTo, inIdx, err_raiser):
-    key = bitcoin.core.key.CECKey()
+    key = zcash.core.key.CECKey()
     key.set_pubkey(pubkey)
 
     if len(sig) == 0:
@@ -199,7 +199,7 @@ def _CheckMultiSig(opcode, script, stack, txTo, inIdx, flags, err_raiser, nOpCou
         stack.pop()
         i -= 1
 
-    # Note how Bitcoin Core duplicates the len(stack) check, rather than
+    # Note how bitcoin coreduplicates the len(stack) check, rather than
     # letting pop() handle it; maybe that's wrong?
     if len(stack) and SCRIPT_VERIFY_NULLDUMMY in flags:
         if stack[-1] != b'':
@@ -254,7 +254,7 @@ def _UnaryOp(opcode, stack, err_raiser):
     else:
         raise AssertionError("Unknown unary opcode encountered; this should not happen")
 
-    stack.append(bitcoin.core._bignum.bn2vch(bn))
+    stack.append(zcash.core._bignum.bn2vch(bn))
 
 
 # OP_LSHIFT and OP_RSHIFT are *not* included in this list as they are disabled
@@ -341,7 +341,7 @@ def _BinOp(opcode, stack, err_raiser):
 
     stack.pop()
     stack.pop()
-    stack.append(bitcoin.core._bignum.bn2vch(bn))
+    stack.append(zcash.core._bignum.bn2vch(bn))
 
 
 def _CheckExec(vfExec):
@@ -414,7 +414,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
 
             if sop == OP_1NEGATE or ((sop >= OP_1) and (sop <= OP_16)):
                 v = sop - (OP_1 - 1)
-                stack.append(bitcoin.core._bignum.bn2vch(v))
+                stack.append(zcash.core._bignum.bn2vch(v))
 
             elif sop in _ISA_BINOP:
                 _BinOp(sop, stack, err_raiser)
@@ -496,7 +496,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
 
             elif sop == OP_DEPTH:
                 bn = len(stack)
-                stack.append(bitcoin.core._bignum.bn2vch(bn))
+                stack.append(zcash.core._bignum.bn2vch(bn))
 
             elif sop == OP_DROP:
                 check_args(1)
@@ -546,11 +546,11 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
 
             elif sop == OP_HASH160:
                 check_args(1)
-                stack.append(bitcoin.core.serialize.Hash160(stack.pop()))
+                stack.append(zcash.core.serialize.Hash160(stack.pop()))
 
             elif sop == OP_HASH256:
                 check_args(1)
-                stack.append(bitcoin.core.serialize.Hash(stack.pop()))
+                stack.append(zcash.core.serialize.Hash(stack.pop()))
 
             elif sop == OP_IF or sop == OP_NOTIF:
                 val = False
@@ -622,7 +622,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
             elif sop == OP_SIZE:
                 check_args(1)
                 bn = len(stack[-1])
-                stack.append(bitcoin.core._bignum.bn2vch(bn))
+                stack.append(zcash.core._bignum.bn2vch(bn))
 
             elif sop == OP_SHA1:
                 check_args(1)
@@ -713,7 +713,7 @@ def EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
                               inIdx=inIdx,
                               flags=flags)
 
-class VerifyScriptError(bitcoin.core.ValidationError):
+class VerifyScriptError(zcash.core.ValidationError):
     pass
 
 def VerifyScript(scriptSig, scriptPubKey, txTo, inIdx, flags=()):
@@ -769,7 +769,7 @@ def VerifyScript(scriptSig, scriptPubKey, txTo, inIdx, flags=()):
             raise VerifyScriptError("scriptPubKey left extra items on stack")
 
 
-class VerifySignatureError(bitcoin.core.ValidationError):
+class VerifySignatureError(zcash.core.ValidationError):
     pass
 
 def VerifySignature(txFrom, txTo, inIdx):

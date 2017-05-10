@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import unittest
 
-from bitcoin.core import *
+from zcash.core import *
 
 class Test_str_value(unittest.TestCase):
     def test(self):
@@ -37,7 +37,7 @@ class Test_Money(unittest.TestCase):
         self.assertFalse(MoneyRange(-1))
         self.assertTrue(MoneyRange(0))
         self.assertTrue(MoneyRange(100000))
-        self.assertTrue(MoneyRange(21000000 * COIN)) # Maximum money on Bitcoin network
+        self.assertTrue(MoneyRange(21000000 * COIN)) # Maximum money on zcash network
         self.assertFalse(MoneyRange(21000001 * COIN))
 
     def test_MoneyRangeCustomParams(self):

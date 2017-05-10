@@ -1,4 +1,4 @@
-bitcoin.core
+zcash.core
 ============
 
 Everything consensus critical is found in the core subpackage.
@@ -6,25 +6,25 @@ Everything consensus critical is found in the core subpackage.
 :mod:`core`
 -----------
 
-.. automodule:: bitcoin.core
+.. automodule:: zcash.core
 
 :mod:`key`
 ----------
 
-.. automodule:: bitcoin.core.key
+.. automodule:: zcash.core.key
 
 :mod:`script`
 -------------
 
-.. automodule:: bitcoin.core.script
+.. automodule:: zcash.core.script
 
 :mod:`scripteval`
 -----------------
 
-.. automodule:: bitcoin.core.scripteval
+.. automodule:: zcash.core.scripteval
 
 :mod:`serialize`
 ----------------
 
-.. automodule:: bitcoin.core.serialize
+.. automodule:: zcash.core.serialize
 

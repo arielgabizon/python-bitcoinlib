@@ -25,7 +25,7 @@ if sys.version > '3':
 
 import binascii
 
-import bitcoin.core
+import zcash.core
 
 B58_DIGITS = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
@@ -105,7 +105,7 @@ class CBase58Data(bytes):
     def __new__(cls, s):
         k = decode(s)
         verbyte, data, check0 = k[0:2], k[2:-4], k[-4:]
-        check1 = bitcoin.core.Hash(verbyte + data)[:4]
+        check1 = zcash.core.Hash(verbyte + data)[:4]
         if check0 != check1:
             raise Base58ChecksumError('Checksum mismatch: expected %r, calculated %r' % (check0, check1))
 
@@ -145,7 +145,7 @@ class CBase58Data(bytes):
         else:
             # Appending two bytes Zcash uses for nVersion
             vs = self.nVersion[:1] + self.nVersion[1:2] + self
-        check = bitcoin.core.Hash(vs)[0:4]
+        check = zcash.core.Hash(vs)[0:4]
         return encode(vs + check)
 
     def __repr__(self):

@@ -45,8 +45,8 @@ Breaking API changes:
   support in v0.12.0 If you need this, use an alternative such as a stunnel or
   a SSH tunnel.
 
-* Removed SCRIPT_VERIFY constants ``bitcoin.core.script``, leaving just the
-  constants in ``bitcoin.core.scripteval``; being singletons the redundant
+* Removed SCRIPT_VERIFY constants ``zcash.core.script``, leaving just the
+  constants in ``zcash.core.scripteval``; being singletons the redundant
   constants were broken anyway.
 
 * SCRIPT_VERIFY_EVEN_S renamed to SCRIPT_VERIFY_LOW_S to match Bitcoin Core's naming
@@ -123,7 +123,7 @@ v0.3.0
 Major change: cleaned up what symbols are exported by modules. \_\_all\_\_ is now
 used extensively, which may break some applications that were not importing the
 right modules. Along those lines some implementation details like the ssl
-attribute of the bitcoin.core.key module, and the entire bitcoin.core.bignum
+attribute of the zcash.core.key module, and the entire zcash.core.bignum
 module, are no longer part of the public API. This should not affect too many
 users, but it will break some code.
 

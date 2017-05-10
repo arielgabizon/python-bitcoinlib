@@ -19,14 +19,14 @@ if sys.version_info.major < 3:
     sys.exit(1)
 
 import hashlib
-import bitcoin.rpc
+import zcash.rpc
 import sys
 
-from bitcoin import params
-from bitcoin.core import *
-from bitcoin.core.script import *
+from zcash import params
+from zcash.core import *
+from zcash.core.script import *
 
-proxy = bitcoin.rpc.Proxy()
+proxy = zcash.rpc.Proxy()
 
 assert len(sys.argv) > 1
 

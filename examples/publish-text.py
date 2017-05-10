@@ -39,10 +39,10 @@ import logging
 import sys
 import os
 
-import bitcoin.rpc
-from bitcoin.core import *
-from bitcoin.core.script import *
-from bitcoin.wallet import *
+import zcash.rpc
+from zcash.core import *
+from zcash.core.script import *
+from zcash.wallet import *
 
 parser = argparse.ArgumentParser(
         description="Publish text in the blockchain, suitably padded for easy recovery with strings",
@@ -87,11 +87,11 @@ elif args.verbosity <= -2:
     logging.root.setLevel(logging.ERROR)
 
 if args.testnet:
-    bitcoin.SelectParams('testnet')
+    zcash.SelectParams('testnet')
 elif args.regtest:
-    bitcoin.SelectParams('regtest')
+    zcash.SelectParams('regtest')
 
-proxy = bitcoin.rpc.Proxy()
+proxy = zcash.rpc.Proxy()
 
 if args.privkey is None:
     args.privkey = CBitcoinSecret.from_secret_bytes(os.urandom(32))
