@@ -242,8 +242,7 @@ class CBitcoinSecret(zcash.base58.CBase58Data, CKey):
 
     def __init__(self, s):
         if self.nVersion != zcash.params.BASE58_PREFIXES['SECRET_KEY']:
-            raise CBitcoinSecretError('Not a base58-encoded secret key: got nVersion=%d; expected nVersion=%d' % \
-                                      (self.nVersion, zcash.params.BASE58_PREFIXES['SECRET_KEY']))
+            raise CBitcoinSecretError('Not a base58-encoded secret key: got nVersion={0}; expected nVersion={1}'.format(self.nVersion, zcash.params.BASE58_PREFIXES['SECRET_KEY']))
 
         CKey.__init__(self, self[0:32], len(self) > 32 and _bord(self[32]) == 1)
 
