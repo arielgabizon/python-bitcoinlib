@@ -38,7 +38,7 @@ library. Non-consensus critical modules include the following:
     zcash.wallet   - Wallet-related code, currently Zcash t-address and
                        private key support
 
-Code related to Zcash's zero-knowledge proofs resides under zcash.core.zkproofs.
+Functions related to Zcash's zero-knowledge proofs resides under `zcash.core.zkproofs`.
 
 Effort has been made to follow the Satoshi source relatively closely, for
 instance Python code and classes that duplicate the functionality of

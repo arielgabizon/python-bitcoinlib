@@ -15,7 +15,7 @@ from zcash.core.script import CScript, OP_DUP, OP_HASH160, OP_SHA256, OP_EQUAL, 
 from zcash.core.scripteval import VerifyScript, SCRIPT_VERIFY_P2SH
 from zcash.wallet import CBitcoinAddress, CBitcoinSecret
 
-SelectParams('testnet')
+SelectParams('regtest')
 
 import hashlib
 
@@ -23,8 +23,7 @@ proxy = zcash.rpc.Proxy()
 info = proxy.getinfo()
 print("INFO FROM PROXY: ", info)
 
-
-# Create the (in)famous correct brainwallet secret key.
+# Preimage for HTLC
 preimage = b'helloworld'
 print('preimage to hex', b2x(preimage))
 hashstring = hashlib.sha256(preimage).digest()
@@ -35,25 +34,29 @@ print('hashstring: ', b2x(hashstring))
 txin_redeemScript = CScript([OP_SHA256, hashstring, OP_EQUAL])
 print(b2x(txin_redeemScript))
 
-# Create the magic P2SH scriptPubKey format from that redeemScript. You should
-# look at the CScript.to_p2sh_scriptPubKey() function in zcash.core.script to
-# understand what's happening, as well as read BIP16:
-# https://github.com/bitcoin/bips/blob/master/bip-0016.mediawiki
+# Create the magic P2SH scriptPubKey format from redeemScript
 txin_scriptPubKey = txin_redeemScript.to_p2sh_scriptPubKey()
 
-# Convert the P2SH scriptPubKey to a base58 zcash address and print it.
-# You'll need to send some funds to it to create a txout to spend.
+# Convert the P2SH scriptPubKey to a base58 Zcash address
 txin_p2sh_address = CBitcoinAddress.from_scriptPubKey(txin_scriptPubKey)
 print('Pay to:',str(txin_p2sh_address))
 
-# Same as the txid:vout the createrawtransaction RPC call requires
-#
+# Fund the P2SH address
+amount = 1.0 * COIN
+txid = proxy.sendtoaddress(txin_p2sh_address, amount)
+print('fund tx', b2x(txid))
+
+ ####
+
 # lx() takes *little-endian* hex and converts it to bytes; in Bitcoin
 # transaction hashes are shown little-endian rather than the usual big-endian.
-# There's also a corresponding x() convenience function that takes big-endian
-# hex and converts it to bytes.
-txid = lx('7064c9c78c4839c456ae13be70a184c0f773ec57c083a17ed18846be9072a61a')
-vout = 1
+# txid = lx('7064c9c78c4839c456ae13be70a184c0f773ec57c083a17ed18846be9072a61a')
+# vout = 1
+txinfo = proxy.gettransaction(txid)
+details = txinfo['details'][0]
+print('get details of fund_tx', details)
+vout = details['vout']
+print('vout', vout)
 
 # Create the txin structure, which includes the outpoint. The scriptSig
 # defaults to being empty.
@@ -61,7 +64,9 @@ txin = CMutableTxIn(COutPoint(txid, vout))
 
 # Create the txout. This time we create the scriptPubKey from a Bitcoin
 # address.
-txout = CMutableTxOut(1.10*COIN, CBitcoinAddress('tmQaM6Ry86vdrokJG8YbNqbouCQ6Kd71agZ').to_scriptPubKey())
+regtest_addr = 'tmMDAio4NC4Y3xXgDMGpco8rWh13dPJt1A6'
+output_val = amount - 0.001
+txout = CMutableTxOut(output_val, CBitcoinAddress(regtest_addr).to_scriptPubKey())
 
 # Create the unsigned transaction.
 tx = CMutableTransaction([txin], [txout])
@@ -92,3 +97,10 @@ VerifyScript(txin.scriptSig, txin_scriptPubKey, tx, 0, (SCRIPT_VERIFY_P2SH,))
 # Done! Print the transaction to standard output with the bytes-to-hex
 # function.
 print('Serialized txn', b2x(tx.serialize()))
+
+redeemtx = proxy.sendrawtransaction(tx)
+print('redeemtx', b2x(redeemtx))
+
+# Display final tx
+info = proxy.getrawtransaction(redeemtx, 1)
+print(info)

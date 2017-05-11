@@ -28,9 +28,6 @@ class MainParams(zcash.core.CoreMainParams):
     BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1c\xb8',
                        'SCRIPT_ADDR':b'\x1c\xbd',
                        'SECRET_KEY' :128}
-    # BASE58_PREFIXES = {'PUBKEY_ADDR':7352,
-    #                    'SCRIPT_ADDR':7357,
-    #                    'SECRET_KEY' :128}
 
 
 class TestNetParams(zcash.core.CoreTestNetParams):
@@ -41,17 +38,14 @@ class TestNetParams(zcash.core.CoreTestNetParams):
     BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
                        'SCRIPT_ADDR':b'\x1c\xba',
                        'SECRET_KEY' :239}
-    # BASE58_PREFIXES = {'PUBKEY_ADDR':7461,
-    #                    'SCRIPT_ADDR':7354,
-    #                    'SECRET_KEY' :239}
 
 class RegTestParams(zcash.core.CoreRegTestParams):
     MESSAGE_START = b'\xaa\xea\x3f\x5f'
     DEFAULT_PORT = 18444
     RPC_PORT = 18232
     DNS_SEEDS = ()
-    BASE58_PREFIXES = {'PUBKEY_ADDR':7461,
-                       'SCRIPT_ADDR':7354,
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
+                       'SCRIPT_ADDR':b'\x1c\xba',
                        'SECRET_KEY' :239}
 
 """Master global setting for what chain params we're using.
