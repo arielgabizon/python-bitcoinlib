@@ -307,7 +307,6 @@ class Proxy(BaseProxy):
         """Return the private key matching an address
         """
         r = self._call('dumpprivkey', str(addr))
-
         return CBitcoinSecret(r)
 
     def fundrawtransaction(self, tx, include_watching=False):
@@ -666,6 +665,97 @@ class Proxy(BaseProxy):
         r = self._call('walletpassphrase', password, timeout)
         return r
 
+    ### Z-address methods below
+
+    def z_exportkey(zaddr):
+        """Reveals the zkey corresponding to 'zaddr'.
+        Then the z_importkey can be used with this output
+        """
+        r = self._call('z_exportkey', zaddr)
+        return r
+
+    def z_exportwallet(filename):
+        """Exports all wallet keys, for taddr and zaddr, in a human-readable format."""
+        r = self._call('z_exportwallet', filename)
+        return r
+
+    def z_getbalance(zaddr, minconf=1):
+        """Returns the balance of a taddr or zaddr belonging to the node’s wallet."""
+        return self._call('z_getbalance', minconf)
+
+    def z_getnewaddress(self):
+        """Returns a new zaddr for receiving payments."""
+        r = self._call('z_getnewaddress')
+        return r
+
+    def z_getoperationresult(self, opid):
+        """Retrieve the result and status of an operation which has finished, and then remove the operation from memory.
+        opid - (array, optional) A list of operation ids we are interested in.
+        If not provided, examine all operations known to the node.
+        """
+        return self._call('z_getoperationresult')
+
+    def z_getoperationstatus(self, opid):
+        """Get operation status and any associated result or error data.  The operation will remain in memory.
+        opid - (array, optional) A list of operation ids we are interested in.
+        If not provided, examine all operations known to the node.
+        """
+        return self._call('z_getoperationstatus')
+
+    def z_gettotalbalance(self, minconf=1):
+        """Return the total value of funds stored in the node’s wallet."""
+        return self._call('z_gettotalbalance', minconf)
+
+    def z_importkey(zkey, rescan='whenkeyisnew', startHeight=0):
+        """Adds a zkey (as returned by z_exportkey) to your wallet.
+        1. "zkey"             (string, required) The zkey (see z_exportkey)
+        2. rescan             (string, optional, default="whenkeyisnew") Rescan the wallet for transactions - can be "yes", "no" or "whenkeyisnew"
+        3. startHeight        (numeric, optional, default=0) Block height to start rescan from
+        Note: This call can take minutes to complete if rescan is true."""
+        r = self._call('z_importkey', zkey, rescan, startHeight)
+        return r
+
+    def z_importwallet(filename):
+        """Imports taddr and zaddr keys from a wallet export file (see z_exportwallet).
+        filename - The wallet file
+        """
+        r = self._call('z_importwallet', filename)
+        return r
+
+    def z_listaddresses(self):
+        """Returns the list of zaddr belonging to the wallet."""
+        return self._call('z_listaddresses')
+
+    def z_listoperationids():
+        """Returns the list of operation ids currently known to the wallet.
+        status - (string, optional) Filter result by the operation's state state e.g. "success".
+        """
+        return self._call('z_listoperationids')
+
+    def z_listreceivedbyaddress(self, zaddr, minconf=1):
+        """Return a list of amounts received by a zaddr belonging to the node’s wallet."""
+        r = self._call('z_listreceivedbyaddress', str(zaddr), minconf)
+        return r
+
+    def z_sendmany(self, fromaddress, amounts, minconf=1, fee=0.0001):
+        """Send multiple times. Amounts are double-precision floating point numbers.
+        Change from a taddr flows to a new taddr address, while change from zaddr returns to itself.
+        When sending coinbase UTXOs to a zaddr, change is not allowed. The entire value of the UTXO(s) must be consumed.
+        Currently, the maximum number of zaddr outputs is 54 due to transaction size limits.
+        1. "fromaddress"         (string, required) The taddr or zaddr to send the funds from.
+        2. "amounts"             (array, required) An array of json objects representing the amounts to send.
+            [{
+              "address":address  (string, required) The address is a taddr or zaddr
+              "amount":amount    (numeric, required) The numeric amount in ZEC is the value
+              "memo":memo        (string, optional) If the address is a zaddr, raw data represented in hexadecimal string format
+            }, ... ]
+        3. minconf               (numeric, optional, default=1) Only use funds confirmed at least this many times.
+        4. fee                   (numeric, optional, default=0.0001) The fee amount to attach to this transaction.
+        """
+        r = self._call('z_sendmany', fromaddress, amounts, minconf, fee)
+        return r
+
+    # Nodes
     def _addnode(self, node, arg):
         r = self._call('addnode', node, arg)
         return r
@@ -678,6 +768,7 @@ class Proxy(BaseProxy):
 
     def removenode(self, node):
         return self._addnode(node, 'remove')
+
 
 __all__ = (
     'JSONRPCError',
