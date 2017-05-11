@@ -25,28 +25,38 @@ class MainParams(zcash.core.CoreMainParams):
     DNS_SEEDS = (('z.cash', 'dnsseed.z.cash'),
                  ('str4d.xyz', 'dnsseed.str4d.xyz'),
                  ('znodes.org', 'dnsseed.znodes.org'))
-    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1c\xb8',
-                       'SCRIPT_ADDR':b'\x1c\xbd',
-                       'SECRET_KEY' :128}
-
+    # PUBKEY_ADDR: first 2 characters, when base58 encoded, are "t1"
+    # SCRIPT_ADDR: first 2 characters, when base58 encoded, are "t3"
+    # SECRET_KEY: the first character, when base58 encoded, is "5" or "K" or "L" (as in Bitcoin)
+    # ZCPAYMENT_ADDRRESS: guarantees the first 2 characters, when base58 encoded, are "zc"
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1C\xB8',
+                       'SCRIPT_ADDR':b'\x1C\xBD',
+                       'SECRET_KEY' :b'\x80',
+                       'ZCPAYMENT_ADDRRESS': b'\x16\x9A'}
 
 class TestNetParams(zcash.core.CoreTestNetParams):
     MESSAGE_START = b'\xfa\x1a\xf9\xbf'
     DEFAULT_PORT = 18233
     RPC_PORT = 18232
     DNS_SEEDS = (('z.cash', 'dnsseed.testnet.z.cash'))
-    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
-                       'SCRIPT_ADDR':b'\x1c\xba',
-                       'SECRET_KEY' :239}
+    # PUBKEY_ADDR: first 2 characters, when base58 encoded, are "tm"
+    # SCRIPT_ADDR: first 2 characters, when base58 encoded, are "t2"
+    # SECRET_KEY: the first character, when base58 encoded, is "9" or "c" (as in Bitcoin)
+    # ZCPAYMENT_ADDRRESS: guarantees the first 2 characters, when base58 encoded, are "zt"
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1D\x25',
+                       'SCRIPT_ADDR':b'\x1C\xBA',
+                       'SECRET_KEY' :b'\xEF',
+                       'ZCPAYMENT_ADDRRESS': b'\x16\xB6'}
 
 class RegTestParams(zcash.core.CoreRegTestParams):
     MESSAGE_START = b'\xaa\xea\x3f\x5f'
     DEFAULT_PORT = 18444
     RPC_PORT = 18232
     DNS_SEEDS = ()
-    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1d\x25',
-                       'SCRIPT_ADDR':b'\x1c\xba',
-                       'SECRET_KEY' :239}
+    BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1D\x25',
+                       'SCRIPT_ADDR':b'\x1C\xBA',
+                       'SECRET_KEY' :b'\xEF',
+                       'ZCPAYMENT_ADDRRESS': b'\x16\xB6'}
 
 """Master global setting for what chain params we're using.
 
