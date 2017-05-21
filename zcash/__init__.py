@@ -45,7 +45,7 @@ class TestNetParams(zcash.core.CoreTestNetParams):
     # ZCPAYMENT_ADDRRESS: guarantees the first 2 characters, when base58 encoded, are "zt"
     BASE58_PREFIXES = {'PUBKEY_ADDR':b'\x1D\x25',
                        'SCRIPT_ADDR':b'\x1C\xBA',
-                       'SECRET_KEY' :239 # b'\xEF',
+                       'SECRET_KEY' :239, # b'\xEF',
                        'ZCPAYMENT_ADDRRESS': b'\x16\xB6'}
 
 class RegTestParams(zcash.core.CoreRegTestParams):
