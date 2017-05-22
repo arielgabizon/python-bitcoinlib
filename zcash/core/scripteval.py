@@ -1,18 +1,18 @@
-# Copyright (C) 2012-2014 The python-bitcoinlib developers
+# Copyright (C) 2012-2014 The python-zcashlib developers
 #
-# This file is part of python-bitcoinlib.
+# This file is part of python-zcashlib.
 #
 # It is subject to the license terms in the LICENSE file found in the top-level
 # directory of this distribution.
 #
-# No part of python-bitcoinlib, including this file, may be copied, modified,
+# No part of python-zcashlib, including this file, may be copied, modified,
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
 """Script evaluation
 
 Be warned that there are highly likely to be consensus bugs in this code; it is
-unlikely to match Satoshi zcash exactly. Think carefully before using this
+unlikely to match Satoshi Bitcoin exactly. Think carefully before using this
 module.
 """
 
@@ -72,7 +72,7 @@ class EvalScriptError(zcash.core.ValidationError):
                  msg,
                  sop=None, sop_data=None, sop_pc=None,
                  stack=None, scriptIn=None, txTo=None, inIdx=None, flags=None,
-                 altstack=None, vfExec=None, nOpCount=None):
+                 altstack=None, vfExec=None, pbegincodehash=None, nOpCount=None):
         super(EvalScriptError, self).__init__('EvalScript: %s' % msg)
 
         self.sop = sop
@@ -85,6 +85,7 @@ class EvalScriptError(zcash.core.ValidationError):
         self.flags = flags
         self.altstack = altstack
         self.vfExec = vfExec
+        self.pbegincodehash = pbegincodehash
         self.nOpCount = nOpCount
 
 class MaxOpCountError(EvalScriptError):
@@ -139,11 +140,16 @@ def _CheckSig(sig, pubkey, script, txTo, inIdx, err_raiser):
     hashtype = _bord(sig[-1])
     sig = sig[:-1]
 
-    try:
-        h = SignatureHash(script, txTo, inIdx, hashtype)
-        return key.verify(h, sig)
-    except ValueError:
-        return false
+    # Raw signature hash due to the SIGHASH_SINGLE bug
+    #
+    # Note that we never raise an exception if RawSignatureHash() returns an
+    # error code. However the first error code case, where inIdx >=
+    # len(txTo.vin), shouldn't ever happen during EvalScript() as that would
+    # imply the scriptSig being checked doesn't correspond to a valid txout -
+    # that should cause other validation machinery to fail long before we ever
+    # got here.
+    (h, err) = RawSignatureHash(script, txTo, inIdx, hashtype)
+    return key.verify(h, sig)
 
 
 def _CheckMultiSig(opcode, script, stack, txTo, inIdx, flags, err_raiser, nOpCount):
@@ -175,6 +181,14 @@ def _CheckMultiSig(opcode, script, stack, txTo, inIdx, flags, err_raiser, nOpCou
     elif len(stack) < i:
         raise err_raiser(ArgumentsInvalidError, opcode, "missing dummy value")
 
+    # Drop the signature, since there's no way for a signature to sign itself
+    #
+    # Of course, this can only come up in very contrived cases now that
+    # scriptSig and scriptPubKey are processed separately.
+    for k in range(sigs_count):
+        sig = stack[-isig - k]
+        script = FindAndDelete(script, CScript([sig]))
+
     success = True
 
     while success and sigs_count > 0:
@@ -199,7 +213,7 @@ def _CheckMultiSig(opcode, script, stack, txTo, inIdx, flags, err_raiser, nOpCou
         stack.pop()
         i -= 1
 
-    # Note how bitcoin coreduplicates the len(stack) check, rather than
+    # Note how Bitcoin Core duplicates the len(stack) check, rather than
     # letting pop() handle it; maybe that's wrong?
     if len(stack) and SCRIPT_VERIFY_NULLDUMMY in flags:
         if stack[-1] != b'':
@@ -366,6 +380,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
 
     altstack = []
     vfExec = []
+    pbegincodehash = 0
     nOpCount = [0]
     for (sop, sop_data, sop_pc) in scriptIn.raw_iter():
         fExec = _CheckExec(vfExec)
@@ -384,7 +399,7 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
                     sop_data=sop_data,
                     sop_pc=sop_pc,
                     stack=stack, scriptIn=scriptIn, txTo=txTo, inIdx=inIdx, flags=flags,
-                    altstack=altstack, vfExec=vfExec, nOpCount=nOpCount[0])
+                    altstack=altstack, vfExec=vfExec, pbegincodehash=pbegincodehash, nOpCount=nOpCount[0])
 
 
         if sop in DISABLED_OPCODES:
@@ -470,14 +485,22 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
                 stack.append(v3)
 
             elif sop == OP_CHECKMULTISIG or sop == OP_CHECKMULTISIGVERIFY:
-                _CheckMultiSig(sop, scriptIn, stack, txTo, inIdx, flags, err_raiser, nOpCount)
+                tmpScript = CScript(scriptIn[pbegincodehash:])
+                _CheckMultiSig(sop, tmpScript, stack, txTo, inIdx, flags, err_raiser, nOpCount)
 
             elif sop == OP_CHECKSIG or sop == OP_CHECKSIGVERIFY:
                 check_args(2)
                 vchPubKey = stack[-1]
                 vchSig = stack[-2]
+                tmpScript = CScript(scriptIn[pbegincodehash:])
 
-                ok = _CheckSig(vchSig, vchPubKey, scriptIn, txTo, inIdx,
+                # Drop the signature, since there's no way for a signature to sign itself
+                #
+                # Of course, this can only come up in very contrived cases now that
+                # scriptSig and scriptPubKey are processed separately.
+                tmpScript = FindAndDelete(tmpScript, CScript([vchSig]))
+
+                ok = _CheckSig(vchSig, vchPubKey, tmpScript, txTo, inIdx,
                                err_raiser)
                 if not ok and sop == OP_CHECKSIGVERIFY:
                     err_raiser(VerifyOpFailedError, sop)
@@ -493,6 +516,9 @@ def _EvalScript(stack, scriptIn, txTo, inIdx, flags=()):
                         # FIXME: this is incorrect, but not caught by existing
                         # test cases
                         stack.append(b"\x00")
+
+            elif sop == OP_CODESEPARATOR:
+                pbegincodehash = sop_pc
 
             elif sop == OP_DEPTH:
                 bn = len(stack)
