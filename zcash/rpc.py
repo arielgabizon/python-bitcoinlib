@@ -495,7 +495,7 @@ class Proxy(BaseProxy):
                     (self.__class__.__name__, ex.error['message'], ex.error['code']))
         if verbose:
             r['tx'] = CTransaction.deserialize(unhexlify(r['hex']))
-            del r['hex']
+            r['hex']
             del r['txid']
             del r['version']
             del r['locktime']
@@ -564,6 +564,14 @@ class Proxy(BaseProxy):
         r = self._call('importaddress', addr, label, rescan)
         return r
 
+    def listreceivedbyaddress(self, minconf=1):
+        r = self._call('listreceivedbyaddress',minconf,False)
+        return r
+    
+    def listtransactions(self):
+        r = self._call('listtransactions')
+        return r
+      
     def listunspent(self, minconf=0, maxconf=9999999, addrs=None):
         """Return unspent transaction outputs in wallet
 
@@ -581,9 +589,7 @@ class Proxy(BaseProxy):
         r2 = []
         for unspent in r:
             unspent['outpoint'] = COutPoint(lx(unspent['txid']), unspent['vout'])
-            del unspent['txid']
-            del unspent['vout']
-
+            
             unspent['address'] = CBitcoinAddress(unspent['address'])
             unspent['scriptPubKey'] = CScript(unhexlify(unspent['scriptPubKey']))
             unspent['amount'] = int(unspent['amount'] * COIN)
@@ -758,6 +764,10 @@ class Proxy(BaseProxy):
         """
         r = self._call('z_sendmany', fromaddress, amounts, minconf, fee)
         return r
+
+    def decoderawtransaction(self, txhex):
+        """Return a JSON object representing the serialized, hex-encoded transaction."""
+        return self._call('decoderawtransaction', txhex)
 
     # Nodes
     def _addnode(self, node, arg):
