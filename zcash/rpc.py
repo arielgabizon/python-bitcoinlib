@@ -520,18 +520,23 @@ class Proxy(BaseProxy):
         r = self._call('getreceivedbyaddress', str(addr), minconf)
         return int(r * COIN)
 
-    def gettransaction(self, txid):
+    def gettransaction(self, txid, includeWatchonly=False):
         """Get detailed information about in-wallet transaction txid
 
         Raises IndexError if transaction not found in the wallet.
 
+        includeWatchonly - Whether to include watchonly addresses in balance calculation and details
+
         FIXME: Returned data types are not yet converted.
         """
-        try:
-            r = self._call('gettransaction', b2lx(txid))
-        except InvalidAddressOrKeyError as ex:
-            raise IndexError('%s.getrawtransaction(): %s (%d)' %
-                    (self.__class__.__name__, ex.error['message'], ex.error['code']))
+        if type(txid) == str:
+            r = self._call('gettransaction', txid)
+        else:
+            try:
+                r = self._call('gettransaction', b2lx(txid))
+            except InvalidAddressOrKeyError as ex:
+                raise IndexError('%s.getrawtransaction(): %s (%d)' %
+                        (self.__class__.__name__, ex.error['message'], ex.error['code']))
         return r
 
     def gettxout(self, outpoint, includemempool=True):
@@ -605,6 +610,10 @@ class Proxy(BaseProxy):
             r = self._call('sendrawtransaction', hextx)
         return lx(r)
 
+    def decoderawtransaction(self, txhex):
+        """Return a JSON object representing the serialized, hex-encoded transaction."""
+        return self._call('decoderawtransaction', txhex)
+
     def sendmany(self, fromaccount, payments, minconf=1, comment='', subtractfeefromamount=[]):
         """Send amount to given addresses.
 
@@ -667,19 +676,19 @@ class Proxy(BaseProxy):
 
     ### Z-address methods below
 
-    def z_exportkey(zaddr):
+    def z_exportkey(self, zaddr):
         """Reveals the zkey corresponding to 'zaddr'.
         Then the z_importkey can be used with this output
         """
         r = self._call('z_exportkey', zaddr)
         return r
 
-    def z_exportwallet(filename):
+    def z_exportwallet(self, filename):
         """Exports all wallet keys, for taddr and zaddr, in a human-readable format."""
         r = self._call('z_exportwallet', filename)
         return r
 
-    def z_getbalance(zaddr, minconf=1):
+    def z_getbalance(self, zaddr, minconf=1):
         """Returns the balance of a taddr or zaddr belonging to the node’s wallet."""
         return self._call('z_getbalance', minconf)
 
@@ -693,20 +702,20 @@ class Proxy(BaseProxy):
         opid - (array, optional) A list of operation ids we are interested in.
         If not provided, examine all operations known to the node.
         """
-        return self._call('z_getoperationresult')
+        return self._call('z_getoperationresult', opid)
 
     def z_getoperationstatus(self, opid):
         """Get operation status and any associated result or error data.  The operation will remain in memory.
         opid - (array, optional) A list of operation ids we are interested in.
         If not provided, examine all operations known to the node.
         """
-        return self._call('z_getoperationstatus')
+        return self._call('z_getoperationstatus', opid)
 
     def z_gettotalbalance(self, minconf=1):
         """Return the total value of funds stored in the node’s wallet."""
         return self._call('z_gettotalbalance', minconf)
 
-    def z_importkey(zkey, rescan='whenkeyisnew', startHeight=0):
+    def z_importkey(self, zkey, rescan='whenkeyisnew', startHeight=0):
         """Adds a zkey (as returned by z_exportkey) to your wallet.
         1. "zkey"             (string, required) The zkey (see z_exportkey)
         2. rescan             (string, optional, default="whenkeyisnew") Rescan the wallet for transactions - can be "yes", "no" or "whenkeyisnew"
@@ -715,7 +724,7 @@ class Proxy(BaseProxy):
         r = self._call('z_importkey', zkey, rescan, startHeight)
         return r
 
-    def z_importwallet(filename):
+    def z_importwallet(self, filename):
         """Imports taddr and zaddr keys from a wallet export file (see z_exportwallet).
         filename - The wallet file
         """
@@ -726,7 +735,7 @@ class Proxy(BaseProxy):
         """Returns the list of zaddr belonging to the wallet."""
         return self._call('z_listaddresses')
 
-    def z_listoperationids():
+    def z_listoperationids(self):
         """Returns the list of operation ids currently known to the wallet.
         status - (string, optional) Filter result by the operation's state state e.g. "success".
         """
@@ -752,6 +761,7 @@ class Proxy(BaseProxy):
         3. minconf               (numeric, optional, default=1) Only use funds confirmed at least this many times.
         4. fee                   (numeric, optional, default=0.0001) The fee amount to attach to this transaction.
         """
+        fromaddress = str(fromaddress)
         r = self._call('z_sendmany', fromaddress, amounts, minconf, fee)
         return r
 
