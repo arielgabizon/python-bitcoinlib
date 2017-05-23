@@ -131,8 +131,8 @@ class BaseProxy(object):
         # correctly.
         self.__conn = None
         #this line is only good for regtest
-        service_port = 18232
-        
+        # service_port = 18232
+
         if service_url is None:
             # Figure out the path to the zcash.conf file
             if zcash_conf_file is None:
@@ -169,16 +169,14 @@ class BaseProxy(object):
 
         self.__service_url = service_url
         self.__url = urlparse.urlparse(service_url)
-        print('url ', self.__url)
+
         if self.__url.scheme not in ('http',):
             raise ValueError('Unsupported URL scheme %r' % self.__url.scheme)
-        print('Just before if clause:',self.__url.port)
+
         if self.__url.port is None:
             port = httplib.HTTP_PORT
-            print('port line 174:', port)
         else:
             port = self.__url.port
-            print("port line 174 else clause:", port)
         self.__id_count = 0
         authpair = "%s:%s" % (self.__url.username, self.__url.password)
         authpair = authpair.encode('utf8')
