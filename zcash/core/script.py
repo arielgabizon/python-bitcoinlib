@@ -1,11 +1,11 @@
-# Copyright (C) 2012-2015 The python-bitcoinlib developers
+# Copyright (C) 2012-2015 The python-zcashlib developers
 #
-# This file is part of python-bitcoinlib.
+# This file is part of python-zcashlib.
 #
 # It is subject to the license terms in the LICENSE file found in the top-level
 # directory of this distribution.
 #
-# No part of python-bitcoinlib, including this file, may be copied, modified,
+# No part of python-zcashlib, including this file, may be copied, modified,
 # propagated, or distributed except according to the terms contained in the
 # LICENSE file.
 
@@ -490,7 +490,7 @@ OPCODES_BY_NAME = {
 DISABLED_OPCODES = frozenset((OP_VERIF, OP_VERNOTIF,
                               OP_CAT, OP_SUBSTR, OP_LEFT, OP_RIGHT, OP_INVERT, OP_AND,
                               OP_OR, OP_XOR, OP_2MUL, OP_2DIV, OP_MUL, OP_DIV, OP_MOD,
-                              OP_LSHIFT, OP_RSHIFT, OP_CODESEPARATOR))
+                              OP_LSHIFT, OP_RSHIFT))
 
 class CScriptInvalidError(Exception):
     """Base class for CScript exceptions"""
@@ -678,7 +678,7 @@ class CScript(bytes):
         Note that this test is consensus-critical.
 
         Scripts that contain invalid pushdata ops return False, matching the
-        behavior in zcash Core.
+        behavior in Bitcoin Core.
         """
         try:
             for (op, op_data, idx) in self.raw_iter():
@@ -779,6 +779,23 @@ SIGHASH_NONE = 2
 SIGHASH_SINGLE = 3
 SIGHASH_ANYONECANPAY = 0x80
 
+def FindAndDelete(script, sig):
+    """Consensus critical, see FindAndDelete() in Satoshi codebase"""
+    r = b''
+    last_sop_idx = sop_idx = 0
+    skip = True
+    for (opcode, data, sop_idx) in script.raw_iter():
+        if not skip:
+            r += script[last_sop_idx:sop_idx]
+        last_sop_idx = sop_idx
+        if script[sop_idx:sop_idx + len(sig)] == sig:
+            skip = True
+        else:
+            skip = False
+    if not skip:
+        r += script[last_sop_idx:]
+    return CScript(r)
+
 def IsLowDERSignature(sig):
     """
     Loosely correlates with IsLowDERSignature() from script/interpreter.cpp
@@ -831,19 +848,24 @@ def CompareBigEndian(c1, c2):
     return 0
 
 
-def SignatureHash(script, txTo, inIdx, hashtype):
-    """Calculate a signature hash
+def RawSignatureHash(script, txTo, inIdx, hashtype):
+    """Consensus-correct SignatureHash
 
-    Checks if inIdx is out of bounds - this *is* consensus-correct behavior
-    for Zcash, and is what you probably want for general wallet use.
+    Returns (hash, err) to precisely match the consensus-critical behavior of
+    the SIGHASH_SINGLE bug. (inIdx is *not* checked for validity)
+
+    If you're just writing wallet software you probably want SignatureHash()
+    instead.
     """
+    HASH_ONE = b'\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
     if inIdx >= len(txTo.vin):
-        raise ValueError("inIdx %d out of range (%d)" % (inIdx, len(txTo.vin)))
+        return (HASH_ONE, "inIdx %d out of range (%d)" % (inIdx, len(txTo.vin)))
     txtmp = zcash.core.CMutableTransaction.from_tx(txTo)
 
-    for i in range(len(txtmp.vin)):
-        if i != inIdx:
-            txtmp.vin[i].scriptSig = b''
+    for txin in txtmp.vin:
+        txin.scriptSig = b''
+    txtmp.vin[inIdx].scriptSig = FindAndDelete(script, CScript([OP_CODESEPARATOR]))
 
     if (hashtype & 0x1f) == SIGHASH_NONE:
         txtmp.vout = []
@@ -855,7 +877,7 @@ def SignatureHash(script, txTo, inIdx, hashtype):
     elif (hashtype & 0x1f) == SIGHASH_SINGLE:
         outIdx = inIdx
         if outIdx >= len(txtmp.vout):
-            raise ValueError("outIdx %d out of range (%d)" % (outIdx, len(txtmp.vout)))
+            return (HASH_ONE, "outIdx %d out of range (%d)" % (outIdx, len(txtmp.vout)))
 
         tmp = txtmp.vout[outIdx]
         txtmp.vout = []
@@ -872,15 +894,25 @@ def SignatureHash(script, txTo, inIdx, hashtype):
         txtmp.vin = []
         txtmp.vin.append(tmp)
 
-    if txtmp.nVersion >= 2 and txtmp.vjoinsplit:
-        txtmp.joinSplitSig = b'\x00'*64
-
     s = txtmp.serialize()
     s += struct.pack(b"<I", hashtype)
 
     hash = zcash.core.Hash(s)
 
-    return hash
+    return (hash, None)
+
+
+def SignatureHash(script, txTo, inIdx, hashtype):
+    """Calculate a signature hash
+
+    'Cooked' version that checks if inIdx is out of bounds - this is *not*
+    consensus-correct behavior, but is what you probably want for general
+    wallet use.
+    """
+    (h, err) = RawSignatureHash(script, txTo, inIdx, hashtype)
+    if err is not None:
+        raise ValueError(err)
+    return h
 
 
 __all__ = (
@@ -1020,6 +1052,8 @@ __all__ = (
         'SIGHASH_NONE',
         'SIGHASH_SINGLE',
         'SIGHASH_ANYONECANPAY',
+        'FindAndDelete',
+        'RawSignatureHash',
         'SignatureHash',
         'IsLowDERSignature',
 )
