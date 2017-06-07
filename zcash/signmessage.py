@@ -14,6 +14,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zcash.core.key import CPubKey
 from zcash.core.serialize import ImmutableSerializable
 from zcash.wallet import P2PKHBitcoinAddress
+import zcash
 import bitcoin
 import base64
 import sys

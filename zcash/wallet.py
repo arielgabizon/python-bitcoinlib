@@ -23,7 +23,7 @@ _bord = ord
 if sys.version > '3':
     _bord = lambda x: x
 
-import bitcoin
+import bitcoin.wallet
 import zcash.base58
 import zcash.core
 import zcash.core.key
@@ -112,12 +112,24 @@ class P2SHBitcoinAddress(CBitcoinAddress):
         return script.CScript([script.OP_HASH160, self, script.OP_EQUAL])
 
 class P2PKHBitcoinAddress(CBitcoinAddress):
+    # convert a bitcoin P2PKH address to the zcash one with same public key hash
+    @classmethod
+    def from_bitcoin_address(cls, bitcoinAddress):
+        btcPubKeyHash = bitcoin.wallet.P2PKHBitcoinAddress(bitcoinAddress).to_bytes()
+        return P2PKHBitcoinAddress.from_bytes(btcPubKeyHash)
+    
+    @classmethod
+    def from_privkey(cls, privkey):
+        return P2PKHBitcoinAddress.from_pubkey(privkey.pub)
+    
+
     @classmethod
     def from_bytes(cls, data, nVersion=None):
         if nVersion is None:
             nVersion = zcash.params.BASE58_PREFIXES['PUBKEY_ADDR']
 
         elif nVersion != zcash.params.BASE58_PREFIXES['PUBKEY_ADDR']:
+            print("nversion:",nVersion)
             raise ValueError('nVersion incorrect for P2PKH address: got %d; expected %d' % \
                                 (nVersion, zcash.params.BASE58_PREFIXES['PUBKEY_ADDR']))
 

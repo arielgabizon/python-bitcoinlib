@@ -106,7 +106,8 @@ class CBase58Data(bytes):
         k = decode(s)
         """ In Zcash private keys have one byte version numbers (same as bitcoin) but other base58 encoded objects have two bytes"""
         """ That's why there is an if here compared to the bitcoin original version """
-        if (bytes(k[0:1]) == b'\xef'):
+        """ This condition is a bit sloppy incase 128 will ever be used as a prefix of something else on mainnet """
+        if (bytes(k[0:1]) == b'\xef' or  bytes(k[0:1])== b'\x80'):
             verbyte, data, check0 = k[0:1], k[1:-4], k[-4:]
             check1 = zcash.core.Hash(verbyte + data)[:4]
             if check0 != check1:
@@ -148,12 +149,14 @@ class CBase58Data(bytes):
 
     def __str__(self):
         """Convert to string"""
-        print("nversion type", type(self.nVersion)," val", self.nVersion)
+        # print("nversion type", type(self.nVersion)," val", self.nVersion)
         if type(self.nVersion) == int:
+            #print("here in int")
             vs = _bchr(self.nVersion) + self
         else:
             # Appending two bytes Zcash uses for nVersion
             #vs = _bchr(int.from_bytes(self.nVersion[:1], byteorder='big')) + _bchr(int.from_bytes(self.nVersion[1:2], byteorder='big')) + self    #_bchr(self.nVersion[:1]) + _bchr(self.nVersion[1:2]) + self
+           #  print("here in not int")
             vs = self.nVersion[:1] + self.nVersion[1:2] + self
         check = zcash.core.Hash(vs)[0:4]
         return encode(vs + check)
