@@ -494,7 +494,7 @@ class Proxy(BaseProxy):
                     (self.__class__.__name__, ex.error['message'], ex.error['code']))
         if verbose:
             r['tx'] = CTransaction.deserialize(unhexlify(r['hex']))
-            del r['hex']
+            r['hex']
             del r['txid']
             del r['version']
             del r['locktime']
@@ -505,6 +505,7 @@ class Proxy(BaseProxy):
             r = CTransaction.deserialize(unhexlify(r))
 
         return r
+
 
     def getreceivedbyaddress(self, addr, minconf=1):
         """Return total amount received by given a (wallet) address
@@ -609,17 +610,14 @@ class Proxy(BaseProxy):
         return lx(r)
 
     def sendmany(self, fromaccount, payments, minconf=1, comment='', subtractfeefromamount=[]):
-        """Send amount to given addresses.
-
-        payments - dict with {address: amount}
-        """
+        """Sent amount to a given address"""
         json_payments = {str(addr):float(amount)/COIN
                          for addr, amount in payments.items()}
         r = self._call('sendmany', fromaccount, json_payments, minconf, comment, subtractfeefromamount)
         return lx(r)
 
     def sendtoaddress(self, addr, amount, comment='', commentto='', subtractfeefromamount=False):
-        """Send amount to a given address"""
+        """Sent amount to a given address"""
         addr = str(addr)
         amount = float(amount)/COIN
         r = self._call('sendtoaddress', addr, amount, comment, commentto, subtractfeefromamount)
@@ -657,17 +655,6 @@ class Proxy(BaseProxy):
             r['pubkey'] = unhexlify(r['pubkey'])
         return r
 
-    def unlockwallet(self, password, timeout=60):
-        """Stores the wallet decryption key in memory for 'timeout' seconds.
-
-        password - The wallet passphrase.
-
-        timeout - The time to keep the decryption key in seconds.
-        (default=60)
-        """
-        r = self._call('walletpassphrase', password, timeout)
-        return r
-
     def _addnode(self, node, arg):
         r = self._call('addnode', node, arg)
         return r
@@ -680,6 +667,15 @@ class Proxy(BaseProxy):
 
     def removenode(self, node):
         return self._addnode(node, 'remove')
+
+    def listtransactions(self):
+        r = self._call('listtransactions')
+        return r
+
+    def decoderawtransaction(self, txhex):
+        """Return a JSON object representing the serialized, hex-encoded transaction."""
+        return self._call('decoderawtransaction', txhex)
+    
 
 __all__ = (
     'JSONRPCError',
